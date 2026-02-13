@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Tuteliq;
@@ -717,4 +718,389 @@ public class BreachResult
 {
     [JsonPropertyName("breach")]
     public BreachRecord? Breach { get; set; }
+}
+
+// =============================================================================
+// Voice Analysis
+// =============================================================================
+
+/// <summary>
+/// A segment of a voice transcription with timing information.
+/// </summary>
+public class TranscriptionSegment
+{
+    [JsonPropertyName("start")]
+    public double Start { get; set; }
+
+    [JsonPropertyName("end")]
+    public double End { get; set; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = "";
+}
+
+/// <summary>
+/// Result of a voice transcription.
+/// </summary>
+public class TranscriptionResult
+{
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = "";
+
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("duration")]
+    public double? Duration { get; set; }
+
+    [JsonPropertyName("segments")]
+    public List<TranscriptionSegment>? Segments { get; set; }
+}
+
+/// <summary>
+/// Result of voice safety analysis.
+/// </summary>
+public class VoiceAnalysisResult
+{
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; set; }
+
+    [JsonPropertyName("transcription")]
+    public TranscriptionResult? Transcription { get; set; }
+
+    [JsonPropertyName("analysis")]
+    public JsonElement? Analysis { get; set; }
+
+    [JsonPropertyName("overall_risk_score")]
+    public double? OverallRiskScore { get; set; }
+
+    [JsonPropertyName("overall_severity")]
+    public string? OverallSeverity { get; set; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; set; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
+    [JsonPropertyName("metadata")]
+    public JsonElement? Metadata { get; set; }
+}
+
+// =============================================================================
+// Image Analysis
+// =============================================================================
+
+/// <summary>
+/// Vision analysis result for an image.
+/// </summary>
+public class VisionResult
+{
+    [JsonPropertyName("extracted_text")]
+    public string? ExtractedText { get; set; }
+
+    [JsonPropertyName("visual_categories")]
+    public List<string>? VisualCategories { get; set; }
+
+    [JsonPropertyName("visual_severity")]
+    public string? VisualSeverity { get; set; }
+
+    [JsonPropertyName("visual_confidence")]
+    public double? VisualConfidence { get; set; }
+
+    [JsonPropertyName("visual_description")]
+    public string? VisualDescription { get; set; }
+
+    [JsonPropertyName("contains_text")]
+    public bool? ContainsText { get; set; }
+
+    [JsonPropertyName("contains_faces")]
+    public bool? ContainsFaces { get; set; }
+}
+
+/// <summary>
+/// Result of image safety analysis.
+/// </summary>
+public class ImageAnalysisResult
+{
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; set; }
+
+    [JsonPropertyName("vision")]
+    public VisionResult? Vision { get; set; }
+
+    [JsonPropertyName("text_analysis")]
+    public JsonElement? TextAnalysis { get; set; }
+
+    [JsonPropertyName("overall_risk_score")]
+    public double? OverallRiskScore { get; set; }
+
+    [JsonPropertyName("overall_severity")]
+    public string? OverallSeverity { get; set; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; set; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
+    [JsonPropertyName("metadata")]
+    public JsonElement? Metadata { get; set; }
+}
+
+// =============================================================================
+// Webhooks
+// =============================================================================
+
+/// <summary>
+/// A webhook configuration.
+/// </summary>
+public class WebhookInfo
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = "";
+
+    [JsonPropertyName("events")]
+    public List<string> Events { get; set; } = new();
+
+    [JsonPropertyName("active")]
+    public bool Active { get; set; }
+
+    [JsonPropertyName("secret")]
+    public string? Secret { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string? CreatedAt { get; set; }
+
+    [JsonPropertyName("updated_at")]
+    public string? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Result from listing webhooks.
+/// </summary>
+public class WebhookListResult
+{
+    [JsonPropertyName("webhooks")]
+    public List<WebhookInfo> Webhooks { get; set; } = new();
+}
+
+/// <summary>
+/// Input for creating a webhook.
+/// </summary>
+public class CreateWebhookInput
+{
+    public string Url { get; set; } = "";
+    public List<string> Events { get; set; } = new();
+    public bool Active { get; set; } = true;
+}
+
+/// <summary>
+/// Result from creating a webhook.
+/// </summary>
+public class CreateWebhookResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+
+    [JsonPropertyName("webhook")]
+    public WebhookInfo Webhook { get; set; } = new();
+}
+
+/// <summary>
+/// Input for updating a webhook.
+/// </summary>
+public class UpdateWebhookInput
+{
+    public string? Url { get; set; }
+    public List<string>? Events { get; set; }
+    public bool? Active { get; set; }
+}
+
+/// <summary>
+/// Result from updating a webhook.
+/// </summary>
+public class UpdateWebhookResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+
+    [JsonPropertyName("webhook")]
+    public WebhookInfo Webhook { get; set; } = new();
+}
+
+/// <summary>
+/// Result from deleting a webhook.
+/// </summary>
+public class DeleteWebhookResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+}
+
+/// <summary>
+/// Result from testing a webhook.
+/// </summary>
+public class TestWebhookResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+
+    [JsonPropertyName("status_code")]
+    public int? StatusCode { get; set; }
+}
+
+/// <summary>
+/// Result from regenerating a webhook secret.
+/// </summary>
+public class RegenerateSecretResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+
+    [JsonPropertyName("secret")]
+    public string Secret { get; set; } = "";
+}
+
+// =============================================================================
+// Pricing
+// =============================================================================
+
+/// <summary>
+/// A pricing plan summary.
+/// </summary>
+public class PricingPlan
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("price")]
+    public string Price { get; set; } = "";
+
+    [JsonPropertyName("messages")]
+    public string Messages { get; set; } = "";
+
+    [JsonPropertyName("features")]
+    public List<string> Features { get; set; } = new();
+}
+
+/// <summary>
+/// Result from getting pricing plans.
+/// </summary>
+public class PricingResult
+{
+    [JsonPropertyName("plans")]
+    public List<PricingPlan> Plans { get; set; } = new();
+}
+
+/// <summary>
+/// A detailed pricing plan with tier information.
+/// </summary>
+public class PricingDetailPlan
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("tier")]
+    public string Tier { get; set; } = "";
+
+    [JsonPropertyName("price")]
+    public JsonElement Price { get; set; }
+
+    [JsonPropertyName("limits")]
+    public JsonElement Limits { get; set; }
+
+    [JsonPropertyName("features")]
+    public JsonElement Features { get; set; }
+
+    [JsonPropertyName("endpoints")]
+    public List<string> Endpoints { get; set; } = new();
+}
+
+/// <summary>
+/// Result from getting detailed pricing information.
+/// </summary>
+public class PricingDetailsResult
+{
+    [JsonPropertyName("plans")]
+    public List<PricingDetailPlan> Plans { get; set; } = new();
+}
+
+// =============================================================================
+// Usage
+// =============================================================================
+
+/// <summary>
+/// A single day of usage data.
+/// </summary>
+public class UsageDay
+{
+    [JsonPropertyName("date")]
+    public string Date { get; set; } = "";
+
+    [JsonPropertyName("total_requests")]
+    public int TotalRequests { get; set; }
+
+    [JsonPropertyName("success_requests")]
+    public int SuccessRequests { get; set; }
+
+    [JsonPropertyName("error_requests")]
+    public int ErrorRequests { get; set; }
+}
+
+/// <summary>
+/// Result from getting usage history.
+/// </summary>
+public class UsageHistoryResult
+{
+    [JsonPropertyName("api_key_id")]
+    public string ApiKeyId { get; set; } = "";
+
+    [JsonPropertyName("days")]
+    public List<UsageDay> Days { get; set; } = new();
+}
+
+/// <summary>
+/// Result from getting usage grouped by tool/endpoint.
+/// </summary>
+public class UsageByToolResult
+{
+    [JsonPropertyName("date")]
+    public string Date { get; set; } = "";
+
+    [JsonPropertyName("tools")]
+    public Dictionary<string, int> Tools { get; set; } = new();
+
+    [JsonPropertyName("endpoints")]
+    public Dictionary<string, int> Endpoints { get; set; } = new();
+}
+
+/// <summary>
+/// Result from getting monthly usage summary.
+/// </summary>
+public class UsageMonthlyResult
+{
+    [JsonPropertyName("tier")]
+    public string Tier { get; set; } = "";
+
+    [JsonPropertyName("tier_display_name")]
+    public string TierDisplayName { get; set; } = "";
+
+    [JsonPropertyName("billing")]
+    public JsonElement Billing { get; set; }
+
+    [JsonPropertyName("usage")]
+    public JsonElement Usage { get; set; }
+
+    [JsonPropertyName("rate_limit")]
+    public JsonElement RateLimit { get; set; }
+
+    [JsonPropertyName("recommendations")]
+    public JsonElement? Recommendations { get; set; }
+
+    [JsonPropertyName("links")]
+    public JsonElement Links { get; set; }
 }

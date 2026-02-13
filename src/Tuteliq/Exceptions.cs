@@ -115,3 +115,12 @@ public class NetworkException : TuteliqException
     public NetworkException(string message, Exception innerException)
         : base(message, innerException) { }
 }
+
+/// <summary>
+/// Thrown when the monthly quota has been exceeded.
+/// </summary>
+public class QuotaExceededException : TuteliqException
+{
+    public QuotaExceededException(string message, string? code = null, object? details = null, string? suggestion = null)
+        : base(message, 429, code, details, suggestion) { }
+}

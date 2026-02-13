@@ -22,6 +22,7 @@ public class TuteliqClient : IDisposable
     private const int MaxContentLength = 50_000;
     private const int MaxMessagesCount = 100;
     private const int MaxBackoffMs = 30_000;
+    private const string SdkIdentifier = "Dotnet SDK";
 
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -161,8 +162,8 @@ public class TuteliqClient : IDisposable
 
         var context = new Dictionary<string, object>();
         if (input.ChildAge.HasValue) context["child_age"] = input.ChildAge.Value;
-        if (input.Context?.Platform != null) context["platform"] = input.Context.Platform;
-        if (context.Count > 0) body["context"] = context;
+        context["platform"] = ResolvePlatform(input.Context?.Platform);
+        body["context"] = context;
 
         AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
 
@@ -479,12 +480,258 @@ public class TuteliqClient : IDisposable
     }
 
     // =========================================================================
+    // Voice Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Analyze a voice/audio file for safety concerns.
+    /// </summary>
+    public async Task<VoiceAnalysisResult> AnalyzeVoiceAsync(
+        byte[] file,
+        string filename,
+        string analysisType = "all",
+        string? fileId = null,
+        string? externalId = null,
+        string? customerId = null,
+        Dictionary<string, object>? metadata = null,
+        string? ageGroup = null,
+        string? language = null,
+        string? platform = null,
+        int? childAge = null,
+        CancellationToken ct = default)
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(file), "file", filename);
+        content.Add(new StringContent(analysisType), "analysis_type");
+        content.Add(new StringContent(ResolvePlatform(platform)), "platform");
+        if (fileId != null) content.Add(new StringContent(fileId), "file_id");
+        if (externalId != null) content.Add(new StringContent(externalId), "external_id");
+        if (customerId != null) content.Add(new StringContent(customerId), "customer_id");
+        if (metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(metadata, JsonOptions)), "metadata");
+        if (ageGroup != null) content.Add(new StringContent(ageGroup), "age_group");
+        if (language != null) content.Add(new StringContent(language), "language");
+        if (childAge != null) content.Add(new StringContent(childAge.Value.ToString()), "child_age");
+        return await MultipartRequestAsync<VoiceAnalysisResult>("/api/v1/safety/voice", content, ct);
+    }
+
+    // =========================================================================
+    // Image Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Analyze an image file for safety concerns.
+    /// </summary>
+    public async Task<ImageAnalysisResult> AnalyzeImageAsync(
+        byte[] file,
+        string filename,
+        string analysisType = "all",
+        string? fileId = null,
+        string? externalId = null,
+        string? customerId = null,
+        Dictionary<string, object>? metadata = null,
+        string? ageGroup = null,
+        string? platform = null,
+        CancellationToken ct = default)
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(file), "file", filename);
+        content.Add(new StringContent(analysisType), "analysis_type");
+        content.Add(new StringContent(ResolvePlatform(platform)), "platform");
+        if (fileId != null) content.Add(new StringContent(fileId), "file_id");
+        if (externalId != null) content.Add(new StringContent(externalId), "external_id");
+        if (customerId != null) content.Add(new StringContent(customerId), "customer_id");
+        if (metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(metadata, JsonOptions)), "metadata");
+        if (ageGroup != null) content.Add(new StringContent(ageGroup), "age_group");
+        return await MultipartRequestAsync<ImageAnalysisResult>("/api/v1/safety/image", content, ct);
+    }
+
+    // =========================================================================
+    // Webhooks
+    // =========================================================================
+
+    /// <summary>
+    /// List all webhooks for the current account.
+    /// </summary>
+    public async Task<WebhookListResult> ListWebhooksAsync(CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<WebhookListResult>(HttpMethod.Get, "/api/v1/webhooks", null, ct);
+    }
+
+    /// <summary>
+    /// Create a new webhook.
+    /// </summary>
+    public async Task<CreateWebhookResult> CreateWebhookAsync(CreateWebhookInput input, CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?>
+        {
+            ["url"] = input.Url,
+            ["events"] = input.Events,
+            ["active"] = input.Active,
+        };
+        return await RequestWithRetryAsync<CreateWebhookResult>(HttpMethod.Post, "/api/v1/webhooks", body, ct);
+    }
+
+    /// <summary>
+    /// Update an existing webhook.
+    /// </summary>
+    public async Task<UpdateWebhookResult> UpdateWebhookAsync(string webhookId, UpdateWebhookInput input, CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?>();
+        if (input.Url != null) body["url"] = input.Url;
+        if (input.Events != null) body["events"] = input.Events;
+        if (input.Active.HasValue) body["active"] = input.Active.Value;
+        return await RequestWithRetryAsync<UpdateWebhookResult>(HttpMethod.Patch, $"/api/v1/webhooks/{webhookId}", body, ct);
+    }
+
+    /// <summary>
+    /// Delete a webhook.
+    /// </summary>
+    public async Task<DeleteWebhookResult> DeleteWebhookAsync(string webhookId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<DeleteWebhookResult>(HttpMethod.Delete, $"/api/v1/webhooks/{webhookId}", null, ct);
+    }
+
+    /// <summary>
+    /// Send a test event to a webhook.
+    /// </summary>
+    public async Task<TestWebhookResult> TestWebhookAsync(string webhookId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<TestWebhookResult>(HttpMethod.Post, $"/api/v1/webhooks/{webhookId}/test", null, ct);
+    }
+
+    /// <summary>
+    /// Regenerate the secret for a webhook.
+    /// </summary>
+    public async Task<RegenerateSecretResult> RegenerateWebhookSecretAsync(string webhookId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<RegenerateSecretResult>(HttpMethod.Post, $"/api/v1/webhooks/{webhookId}/secret", null, ct);
+    }
+
+    // =========================================================================
+    // Pricing
+    // =========================================================================
+
+    /// <summary>
+    /// Get available pricing plans.
+    /// </summary>
+    public async Task<PricingResult> GetPricingAsync(CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<PricingResult>(HttpMethod.Get, "/api/v1/pricing", null, ct);
+    }
+
+    /// <summary>
+    /// Get detailed pricing information including tier limits and features.
+    /// </summary>
+    public async Task<PricingDetailsResult> GetPricingDetailsAsync(CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<PricingDetailsResult>(HttpMethod.Get, "/api/v1/pricing/details", null, ct);
+    }
+
+    // =========================================================================
+    // Usage
+    // =========================================================================
+
+    /// <summary>
+    /// Get usage history for the current API key.
+    /// </summary>
+    public async Task<UsageHistoryResult> GetUsageHistoryAsync(int? days = null, CancellationToken ct = default)
+    {
+        var query = days.HasValue ? $"?days={days.Value}" : "";
+        return await RequestWithRetryAsync<UsageHistoryResult>(HttpMethod.Get, $"/api/v1/usage/history{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Get usage grouped by tool/endpoint.
+    /// </summary>
+    public async Task<UsageByToolResult> GetUsageByToolAsync(string? date = null, CancellationToken ct = default)
+    {
+        var query = date != null ? $"?date={date}" : "";
+        return await RequestWithRetryAsync<UsageByToolResult>(HttpMethod.Get, $"/api/v1/usage/by-tool{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Get monthly usage summary including billing and rate limit information.
+    /// </summary>
+    public async Task<UsageMonthlyResult> GetUsageMonthlyAsync(CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<UsageMonthlyResult>(HttpMethod.Get, "/api/v1/usage/monthly", null, ct);
+    }
+
+    // =========================================================================
     // Private Methods
     // =========================================================================
 
     private async Task<T> PostAsync<T>(string path, Dictionary<string, object?> body, CancellationToken ct)
     {
         return await RequestWithRetryAsync<T>(HttpMethod.Post, path, body, ct);
+    }
+
+    private async Task<T> MultipartRequestAsync<T>(string path, MultipartFormDataContent content, CancellationToken ct = default)
+    {
+        Exception? lastError = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                var sw = Stopwatch.StartNew();
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = content };
+                    request.Headers.Add("X-API-Key", _apiKey);
+
+                    using var response = await _httpClient.SendAsync(request, cts.Token);
+
+                    sw.Stop();
+                    LastLatencyMs = sw.ElapsedMilliseconds;
+
+                    ParseResponseHeaders(response);
+
+                    var responseBody = await response.Content.ReadAsStringAsync(cts.Token);
+
+                    if (!response.IsSuccessStatusCode)
+                        HandleErrorResponse(response.StatusCode, responseBody);
+
+                    return JsonSerializer.Deserialize<T>(responseBody, JsonOptions)
+                        ?? throw new TuteliqException("Failed to parse API response");
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw new Tuteliq.TimeoutException($"Request to {path} timed out after {_timeout}ms");
+                }
+                catch (HttpRequestException ex)
+                {
+                    throw new NetworkException($"Network error: {ex.Message}", ex);
+                }
+            }
+            catch (AuthenticationException) { throw; }
+            catch (ValidationException) { throw; }
+            catch (NotFoundException) { throw; }
+            catch (TierAccessException) { throw; }
+            catch (RateLimitException ex) when (attempt < _maxRetries)
+            {
+                lastError = ex;
+                var delay = ex.RetryAfterSeconds.HasValue
+                    ? ex.RetryAfterSeconds.Value * 1000
+                    : CalculateBackoff(attempt);
+                await Task.Delay(delay, ct);
+            }
+            catch (TuteliqException ex) when (attempt < _maxRetries && IsRetryable(ex))
+            {
+                lastError = ex;
+                await Task.Delay(CalculateBackoff(attempt), ct);
+            }
+        }
+
+        throw lastError ?? new TuteliqException("Request failed after retries");
     }
 
     private async Task<T> RequestWithRetryAsync<T>(HttpMethod method, string path, object? body, CancellationToken ct)
@@ -640,15 +887,24 @@ public class TuteliqClient : IDisposable
         return response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
     }
 
+    private static string ResolvePlatform(string? platform = null)
+    {
+        if (!string.IsNullOrEmpty(platform))
+            return $"{platform} - {SdkIdentifier}";
+        return SdkIdentifier;
+    }
+
     private static void AddContext(Dictionary<string, object?> body, AnalysisContext? context)
     {
-        if (context == null) return;
         var dict = new Dictionary<string, object>();
-        if (context.Language != null) dict["language"] = context.Language;
-        if (context.AgeGroup != null) dict["age_group"] = context.AgeGroup;
-        if (context.Relationship != null) dict["relationship"] = context.Relationship;
-        if (context.Platform != null) dict["platform"] = context.Platform;
-        if (dict.Count > 0) body["context"] = dict;
+        if (context != null)
+        {
+            if (context.Language != null) dict["language"] = context.Language;
+            if (context.AgeGroup != null) dict["age_group"] = context.AgeGroup;
+            if (context.Relationship != null) dict["relationship"] = context.Relationship;
+        }
+        dict["platform"] = ResolvePlatform(context?.Platform);
+        body["context"] = dict;
     }
 
     private static void AddTrackingFields(Dictionary<string, object?> body, string? externalId, string? customerId, Dictionary<string, object>? metadata)
