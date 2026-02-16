@@ -284,6 +284,48 @@ result.Categories            // List<string>
 result.RecommendedNextSteps  // List<string>
 ```
 
+### Voice Streaming
+
+Real-time voice analysis over WebSocket:
+
+```csharp
+await using var session = client.CreateVoiceStream(
+    config: new VoiceStreamConfig
+    {
+        IntervalSeconds = 10,
+        AnalysisTypes = new List<string> { "bullying", "unsafe" }
+    },
+    handlers: new VoiceStreamHandlers
+    {
+        OnReady = e => Console.WriteLine($"Session ready: {e.SessionId}"),
+        OnTranscription = e => Console.WriteLine($"Transcription: {e.Text}"),
+        OnAlert = e => Console.WriteLine($"Alert: {e.Category} ({e.Severity})"),
+        OnSessionSummary = e => Console.WriteLine($"Summary: Risk {e.OverallRisk}")
+    }
+);
+
+await session.ConnectAsync();
+
+// Send audio data
+await session.SendAudioAsync(audioBytes);
+
+// End session and get summary
+var summary = await session.EndAsync();
+```
+
+### Credits Used
+
+All analysis result types include a `CreditsUsed` property that indicates how many API credits were consumed by the request:
+
+```csharp
+var result = await client.DetectBullyingAsync(new DetectBullyingInput
+{
+    Content = "text to analyze"
+});
+
+Console.WriteLine($"Credits used: {result.CreditsUsed}");
+```
+
 ---
 
 ## Tracking Fields

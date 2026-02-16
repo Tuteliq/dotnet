@@ -658,6 +658,18 @@ public class TuteliqClient : IDisposable
     }
 
     // =========================================================================
+    // Voice Streaming
+    // =========================================================================
+
+    /// <summary>
+    /// Create a voice streaming session over WebSocket.
+    /// </summary>
+    public VoiceStreamSession CreateVoiceStream(VoiceStreamConfig? config = null, VoiceStreamHandlers? handlers = null)
+    {
+        return new VoiceStreamSession(_apiKey, config, handlers);
+    }
+
+    // =========================================================================
     // Private Methods
     // =========================================================================
 

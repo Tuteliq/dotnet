@@ -273,6 +273,9 @@ public class BullyingResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -309,6 +312,9 @@ public class GroomingResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -348,6 +354,9 @@ public class UnsafeResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -364,6 +373,9 @@ public class AnalyzeResult
     public string? ExternalId { get; set; }
     public string? CustomerId { get; set; }
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -397,6 +409,9 @@ public class EmotionsResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -424,6 +439,9 @@ public class ActionPlanResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 /// <summary>
@@ -454,6 +472,9 @@ public class ReportResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 // =============================================================================
@@ -785,6 +806,9 @@ public class VoiceAnalysisResult
 
     [JsonPropertyName("metadata")]
     public JsonElement? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 // =============================================================================
@@ -846,6 +870,9 @@ public class ImageAnalysisResult
 
     [JsonPropertyName("metadata")]
     public JsonElement? Metadata { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; set; }
 }
 
 // =============================================================================
