@@ -111,6 +111,53 @@ public enum WebhookEventType
     BullyingSevere
 }
 
+/// <summary>
+/// Supported languages for analysis.
+/// </summary>
+public enum Language
+{
+    En, Es, Pt, Uk, Sv, No, Da, Fi, De, Fr
+}
+
+/// <summary>
+/// Language support stability status.
+/// </summary>
+public enum LanguageStatus
+{
+    Stable,
+    Beta
+}
+
+/// <summary>
+/// Detection endpoint types for fraud and extended safety analysis.
+/// </summary>
+public enum Detection
+{
+    Bullying,
+    Grooming,
+    Unsafe,
+    SocialEngineering,
+    AppFraud,
+    RomanceScam,
+    MuleRecruitment,
+    GamblingHarm,
+    CoerciveControl,
+    VulnerabilityExploitation,
+    Radicalisation
+}
+
+/// <summary>
+/// Account tier levels.
+/// </summary>
+public enum Tier
+{
+    Starter,
+    Indie,
+    Pro,
+    Business,
+    Enterprise
+}
+
 internal static class EnumExtensions
 {
     public static string ToApiString(this Severity value) => value switch
@@ -169,6 +216,54 @@ internal static class EnumExtensions
         _ => "incident.critical"
     };
 
+    public static string ToApiString(this Detection value) => value switch
+    {
+        Detection.Bullying => "bullying",
+        Detection.Grooming => "grooming",
+        Detection.Unsafe => "unsafe",
+        Detection.SocialEngineering => "social-engineering",
+        Detection.AppFraud => "app-fraud",
+        Detection.RomanceScam => "romance-scam",
+        Detection.MuleRecruitment => "mule-recruitment",
+        Detection.GamblingHarm => "gambling-harm",
+        Detection.CoerciveControl => "coercive-control",
+        Detection.VulnerabilityExploitation => "vulnerability-exploitation",
+        Detection.Radicalisation => "radicalisation",
+        _ => "bullying"
+    };
+
+    public static string ToApiString(this Language value) => value switch
+    {
+        Language.En => "en",
+        Language.Es => "es",
+        Language.Pt => "pt",
+        Language.Uk => "uk",
+        Language.Sv => "sv",
+        Language.No => "no",
+        Language.Da => "da",
+        Language.Fi => "fi",
+        Language.De => "de",
+        Language.Fr => "fr",
+        _ => "en"
+    };
+
+    public static string ToApiString(this LanguageStatus value) => value switch
+    {
+        LanguageStatus.Stable => "stable",
+        LanguageStatus.Beta => "beta",
+        _ => "stable"
+    };
+
+    public static string ToApiString(this Tier value) => value switch
+    {
+        Tier.Starter => "starter",
+        Tier.Indie => "indie",
+        Tier.Pro => "pro",
+        Tier.Business => "business",
+        Tier.Enterprise => "enterprise",
+        _ => "starter"
+    };
+
     public static Severity ParseSeverity(string? value) => value?.ToLowerInvariant() switch
     {
         "low" => Severity.Low,
@@ -204,5 +299,12 @@ internal static class EnumExtensions
         "stable" => EmotionTrend.Stable,
         "worsening" => EmotionTrend.Worsening,
         _ => EmotionTrend.Stable
+    };
+
+    public static LanguageStatus ParseLanguageStatus(string? value) => value?.ToLowerInvariant() switch
+    {
+        "stable" => LanguageStatus.Stable,
+        "beta" => LanguageStatus.Beta,
+        _ => LanguageStatus.Stable
     };
 }

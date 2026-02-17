@@ -274,6 +274,12 @@ public class BullyingResult
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
 
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("language_status")]
+    public string? LanguageStatusRaw { get; set; }
+
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; set; }
 }
@@ -312,6 +318,12 @@ public class GroomingResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("language_status")]
+    public string? LanguageStatusRaw { get; set; }
 
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; set; }
@@ -354,6 +366,12 @@ public class UnsafeResult
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object>? Metadata { get; set; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("language_status")]
+    public string? LanguageStatusRaw { get; set; }
 
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; set; }
@@ -873,6 +891,252 @@ public class ImageAnalysisResult
 
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; set; }
+}
+
+// =============================================================================
+// Detection (Fraud & Extended Safety)
+// =============================================================================
+
+/// <summary>
+/// Input for fraud and extended safety detection endpoints.
+/// </summary>
+public class DetectionInput
+{
+    /// <summary>Text content to analyze.</summary>
+    public required string Content { get; init; }
+    public AnalysisContext? Context { get; init; }
+    public bool IncludeEvidence { get; init; }
+    /// <summary>Your unique identifier for correlation with your systems (max 255 chars).</summary>
+    public string? ExternalId { get; init; }
+    /// <summary>Your end-customer identifier for multi-tenant / B2B2C routing (max 255 chars).</summary>
+    public string? CustomerId { get; init; }
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+/// <summary>
+/// Input for multi-endpoint analysis.
+/// </summary>
+public class AnalyseMultiInput
+{
+    /// <summary>Text content to analyze.</summary>
+    public required string Content { get; init; }
+    /// <summary>List of detection endpoints to run.</summary>
+    public required List<Detection> Detections { get; init; }
+    public AnalysisContext? Context { get; init; }
+    public bool IncludeEvidence { get; init; }
+    /// <summary>Your unique identifier for correlation with your systems (max 255 chars).</summary>
+    public string? ExternalId { get; init; }
+    /// <summary>Your end-customer identifier for multi-tenant / B2B2C routing (max 255 chars).</summary>
+    public string? CustomerId { get; init; }
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+/// <summary>
+/// A category detected in fraud/safety analysis.
+/// </summary>
+public class DetectionCategory
+{
+    [JsonPropertyName("tag")]
+    public string Tag { get; init; } = "";
+
+    [JsonPropertyName("label")]
+    public string Label { get; init; } = "";
+
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; init; }
+}
+
+/// <summary>
+/// Evidence detail for a detection result.
+/// </summary>
+public class DetectionEvidence
+{
+    [JsonPropertyName("text")]
+    public string Text { get; init; } = "";
+
+    [JsonPropertyName("tactic")]
+    public string Tactic { get; init; } = "";
+
+    [JsonPropertyName("weight")]
+    public double Weight { get; init; }
+}
+
+/// <summary>
+/// Age calibration information applied to a detection.
+/// </summary>
+public class AgeCalibration
+{
+    [JsonPropertyName("applied")]
+    public bool Applied { get; init; }
+
+    [JsonPropertyName("age_group")]
+    public string? AgeGroup { get; init; }
+
+    [JsonPropertyName("multiplier")]
+    public double? Multiplier { get; init; }
+}
+
+/// <summary>
+/// Result of a fraud or extended safety detection.
+/// </summary>
+public class DetectionResult
+{
+    [JsonPropertyName("endpoint")]
+    public string Endpoint { get; init; } = "";
+
+    [JsonPropertyName("detected")]
+    public bool Detected { get; init; }
+
+    [JsonPropertyName("severity")]
+    public double Severity { get; init; }
+
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; init; }
+
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; init; }
+
+    [JsonPropertyName("level")]
+    public string Level { get; init; } = "";
+
+    [JsonPropertyName("categories")]
+    public List<DetectionCategory> Categories { get; init; } = new();
+
+    [JsonPropertyName("recommended_action")]
+    public string RecommendedAction { get; init; } = "";
+
+    [JsonPropertyName("rationale")]
+    public string Rationale { get; init; } = "";
+
+    [JsonPropertyName("language")]
+    public string Language { get; init; } = "";
+
+    [JsonPropertyName("language_status")]
+    public string LanguageStatus { get; init; } = "";
+
+    [JsonPropertyName("evidence")]
+    public List<DetectionEvidence>? Evidence { get; init; }
+
+    [JsonPropertyName("age_calibration")]
+    public AgeCalibration? AgeCalibration { get; init; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; init; }
+
+    [JsonPropertyName("processing_time_ms")]
+    public double? ProcessingTimeMs { get; init; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; init; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; init; }
+
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+/// <summary>
+/// Summary of a multi-endpoint analysis.
+/// </summary>
+public class AnalyseMultiSummary
+{
+    [JsonPropertyName("total_endpoints")]
+    public int TotalEndpoints { get; init; }
+
+    [JsonPropertyName("detected_count")]
+    public int DetectedCount { get; init; }
+
+    [JsonPropertyName("highest_risk")]
+    public Dictionary<string, object>? HighestRisk { get; init; }
+
+    [JsonPropertyName("overall_risk_level")]
+    public string OverallRiskLevel { get; init; } = "";
+}
+
+/// <summary>
+/// Result of a multi-endpoint analysis.
+/// </summary>
+public class AnalyseMultiResult
+{
+    [JsonPropertyName("results")]
+    public List<DetectionResult> Results { get; init; } = new();
+
+    [JsonPropertyName("summary")]
+    public AnalyseMultiSummary Summary { get; init; } = new();
+
+    [JsonPropertyName("cross_endpoint_modifier")]
+    public double? CrossEndpointModifier { get; init; }
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; init; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; init; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; init; }
+
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+// =============================================================================
+// Video Analysis
+// =============================================================================
+
+/// <summary>
+/// A safety finding from video frame analysis.
+/// </summary>
+public class VideoSafetyFinding
+{
+    [JsonPropertyName("frame_index")]
+    public int FrameIndex { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public double Timestamp { get; init; }
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = "";
+
+    [JsonPropertyName("categories")]
+    public List<string> Categories { get; init; } = new();
+
+    [JsonPropertyName("severity")]
+    public double Severity { get; init; }
+}
+
+/// <summary>
+/// Result of video safety analysis.
+/// </summary>
+public class VideoAnalysisResult
+{
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; init; }
+
+    [JsonPropertyName("frames_analyzed")]
+    public int FramesAnalyzed { get; init; }
+
+    [JsonPropertyName("safety_findings")]
+    public List<VideoSafetyFinding> SafetyFindings { get; init; } = new();
+
+    [JsonPropertyName("overall_risk_score")]
+    public double OverallRiskScore { get; init; }
+
+    [JsonPropertyName("overall_severity")]
+    public string OverallSeverity { get; init; } = "";
+
+    [JsonPropertyName("credits_used")]
+    public int? CreditsUsed { get; init; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; init; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; init; }
+
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, object>? Metadata { get; init; }
 }
 
 // =============================================================================

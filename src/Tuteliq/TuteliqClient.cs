@@ -546,6 +546,102 @@ public class TuteliqClient : IDisposable
     }
 
     // =========================================================================
+    // Fraud & Extended Safety Detection
+    // =========================================================================
+
+    /// <summary>
+    /// Detect social engineering patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectSocialEngineeringAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/fraud/social-engineering", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect app fraud patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectAppFraudAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/fraud/app-fraud", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect romance scam patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectRomanceScamAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/fraud/romance-scam", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect mule recruitment patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectMuleRecruitmentAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/fraud/mule-recruitment", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect gambling harm indicators in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectGamblingHarmAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/safety/gambling-harm", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect coercive control patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectCoerciveControlAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/safety/coercive-control", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect vulnerability exploitation patterns in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectVulnerabilityExploitationAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/safety/vulnerability-exploitation", BuildDetectionBody(input), ct);
+
+    /// <summary>
+    /// Detect radicalisation indicators in text content.
+    /// </summary>
+    public async Task<DetectionResult> DetectRadicalisationAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DetectionResult>("/api/v1/safety/radicalisation", BuildDetectionBody(input), ct);
+
+    // =========================================================================
+    // Multi-Endpoint Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Run multiple detection endpoints in a single request.
+    /// </summary>
+    public async Task<AnalyseMultiResult> AnalyseMultiAsync(AnalyseMultiInput input, CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?>
+        {
+            ["text"] = input.Content,
+            ["endpoints"] = input.Detections.Select(d => d.ToApiString()).ToList()
+        };
+        AddContext(body, input.Context);
+        if (input.IncludeEvidence) body["options"] = new Dictionary<string, object> { ["include_evidence"] = true };
+        AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
+        return await PostAsync<AnalyseMultiResult>("/api/v1/analyse/multi", body, ct);
+    }
+
+    // =========================================================================
+    // Video Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Analyze a video file for safety concerns.
+    /// </summary>
+    public async Task<VideoAnalysisResult> AnalyzeVideoAsync(
+        byte[] file, string filename,
+        string? fileId = null, string? externalId = null, string? customerId = null,
+        Dictionary<string, object>? metadata = null, string? ageGroup = null,
+        string? platform = null, CancellationToken ct = default)
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(file), "file", filename);
+        content.Add(new StringContent(ResolvePlatform(platform)), "platform");
+        if (fileId != null) content.Add(new StringContent(fileId), "file_id");
+        if (externalId != null) content.Add(new StringContent(externalId), "external_id");
+        if (customerId != null) content.Add(new StringContent(customerId), "customer_id");
+        if (metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(metadata, JsonOptions)), "metadata");
+        if (ageGroup != null) content.Add(new StringContent(ageGroup), "age_group");
+        return await MultipartRequestAsync<VideoAnalysisResult>("/api/v1/safety/video", content, ct);
+    }
+
+    // =========================================================================
     // Webhooks
     // =========================================================================
 
@@ -904,6 +1000,15 @@ public class TuteliqClient : IDisposable
         if (!string.IsNullOrEmpty(platform))
             return $"{platform} - {SdkIdentifier}";
         return SdkIdentifier;
+    }
+
+    private Dictionary<string, object?> BuildDetectionBody(DetectionInput input)
+    {
+        var body = new Dictionary<string, object?> { ["text"] = input.Content };
+        AddContext(body, input.Context);
+        if (input.IncludeEvidence) body["include_evidence"] = true;
+        AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
+        return body;
     }
 
     private static void AddContext(Dictionary<string, object?> body, AnalysisContext? context)
