@@ -10,7 +10,7 @@
 
     <!-- NuGet Package -->
     <PackageId>Tuteliq</PackageId>
-    <Version>2.2.0</Version>
+    <Version>2.2.1</Version>
     <Authors>Tuteliq</Authors>
     <Company>Tuteliq</Company>
     <Description>Official .NET SDK for the Tuteliq API — AI-powered child safety analysis for C#/.NET applications</Description>
