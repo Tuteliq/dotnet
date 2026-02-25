@@ -174,6 +174,14 @@ result.Confidence          // double (0-1)
 result.RiskScore           // double (0-1)
 result.Rationale           // string
 result.RecommendedAction   // string
+result.MessageAnalysis     // List<MessageAnalysis>? — per-message breakdown (conversation-aware endpoints)
+
+// Per-message breakdown
+if (result.MessageAnalysis is not null)
+{
+    foreach (var m in result.MessageAnalysis)
+        Console.WriteLine($"Message {m.MessageIndex}: risk={m.RiskScore}, flags=[{string.Join(", ", m.Flags)}], summary={m.Summary}");
+}
 ```
 
 ### Unsafe Content Detection
