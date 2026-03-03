@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: Tuteliq .NET SDK
+message: "If you use this software, please cite it using this metadata."
+type: software
+authors:
+  - name: Tuteliq
+    website: https://tuteliq.ai
+repository-code: https://github.com/Tuteliq/dotnet
+url: https://tuteliq.ai
+abstract: >-
+  Official .NET SDK for Tuteliq — AI-powered child safety API for C#/.NET applications (ASP.NET, Blazor, MAUI)
+keywords:
+  - child safety
+  - dotnet
+  - csharp
+  - content moderation
+  - KOSA
+  - SDK
+  - ASP.NET
+  - Blazor
+  - online safety
+  - bullying detection
+license: MIT

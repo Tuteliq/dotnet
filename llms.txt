@@ -1,0 +1,28 @@
+# Tuteliq .NET SDK
+
+> Official .NET SDK for Tuteliq — AI-powered child safety API for C#/.NET applications.
+
+## What is this?
+A .NET library for the Tuteliq child safety API. Detect bullying, grooming, self-harm, substance promotion, and other harmful content in text, conversations, audio, images, and video. Works with ASP.NET, Blazor, MAUI, and any .NET 6+ application.
+
+## Install
+dotnet add package Tuteliq
+
+## Quick Start
+using Tuteliq;
+var client = new TuteliqClient(apiKey: Environment.GetEnvironmentVariable("TUTELIQ_API_KEY"));
+var result = await client.DetectUnsafeAsync(text: "content to check", ageGroup: "13-15");
+
+## Key Features
+- Async/await throughout
+- All 20+ Tuteliq API endpoints
+- 16+ detection categories (KOSA compliant)
+- Age group calibration (under-10, 10-12, 13-15, 14-17)
+- Automatic retries and error handling
+- Strong typing for all request/response models
+
+## Links
+- Website: https://tuteliq.ai
+- Documentation: https://docs.tuteliq.ai
+- NuGet: https://www.nuget.org/packages/Tuteliq
+- GitHub: https://github.com/Tuteliq/dotnet
