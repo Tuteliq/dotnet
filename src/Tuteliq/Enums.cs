@@ -158,6 +158,48 @@ public enum Tier
     Enterprise
 }
 
+/// <summary>
+/// Verification mode for age or identity verification sessions.
+/// </summary>
+public enum VerificationMode
+{
+    Age,
+    Identity
+}
+
+/// <summary>
+/// Document type hint for verification sessions.
+/// </summary>
+public enum DocumentType
+{
+    Passport,
+    IdCard,
+    DriversLicense
+}
+
+/// <summary>
+/// Verification result status.
+/// </summary>
+public enum VerificationStatus
+{
+    Verified,
+    Failed,
+    NeedsReview
+}
+
+/// <summary>
+/// Verification session lifecycle status.
+/// </summary>
+public enum VerificationSessionStatus
+{
+    Pending,
+    InProgress,
+    Completed,
+    Failed,
+    Expired,
+    Cancelled
+}
+
 internal static class EnumExtensions
 {
     public static string ToApiString(this Severity value) => value switch
@@ -262,6 +304,66 @@ internal static class EnumExtensions
         Tier.Business => "business",
         Tier.Enterprise => "enterprise",
         _ => "starter"
+    };
+
+    public static string ToApiString(this VerificationMode value) => value switch
+    {
+        VerificationMode.Age => "age",
+        VerificationMode.Identity => "identity",
+        _ => "age"
+    };
+
+    public static string ToApiString(this DocumentType value) => value switch
+    {
+        DocumentType.Passport => "passport",
+        DocumentType.IdCard => "id_card",
+        DocumentType.DriversLicense => "drivers_license",
+        _ => "passport"
+    };
+
+    public static string ToApiString(this VerificationStatus value) => value switch
+    {
+        VerificationStatus.Verified => "verified",
+        VerificationStatus.Failed => "failed",
+        VerificationStatus.NeedsReview => "needs_review",
+        _ => "failed"
+    };
+
+    public static string ToApiString(this VerificationSessionStatus value) => value switch
+    {
+        VerificationSessionStatus.Pending => "pending",
+        VerificationSessionStatus.InProgress => "in_progress",
+        VerificationSessionStatus.Completed => "completed",
+        VerificationSessionStatus.Failed => "failed",
+        VerificationSessionStatus.Expired => "expired",
+        VerificationSessionStatus.Cancelled => "cancelled",
+        _ => "pending"
+    };
+
+    public static VerificationMode ParseVerificationMode(string? value) => value?.ToLowerInvariant() switch
+    {
+        "age" => VerificationMode.Age,
+        "identity" => VerificationMode.Identity,
+        _ => VerificationMode.Age
+    };
+
+    public static VerificationStatus ParseVerificationStatus(string? value) => value?.ToLowerInvariant() switch
+    {
+        "verified" => VerificationStatus.Verified,
+        "failed" => VerificationStatus.Failed,
+        "needs_review" => VerificationStatus.NeedsReview,
+        _ => VerificationStatus.Failed
+    };
+
+    public static VerificationSessionStatus ParseVerificationSessionStatus(string? value) => value?.ToLowerInvariant() switch
+    {
+        "pending" => VerificationSessionStatus.Pending,
+        "in_progress" => VerificationSessionStatus.InProgress,
+        "completed" => VerificationSessionStatus.Completed,
+        "failed" => VerificationSessionStatus.Failed,
+        "expired" => VerificationSessionStatus.Expired,
+        "cancelled" => VerificationSessionStatus.Cancelled,
+        _ => VerificationSessionStatus.Pending
     };
 
     public static Severity ParseSeverity(string? value) => value?.ToLowerInvariant() switch

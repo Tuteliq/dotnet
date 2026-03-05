@@ -750,3 +750,204 @@ public class RetryTests
         Assert.Equal(1, callCount);
     }
 }
+
+// =============================================================================
+// Verification Tests
+// =============================================================================
+
+public class VerificationTests
+{
+    [Fact]
+    public void VerificationMode_ToApiString()
+    {
+        Assert.Equal("age", VerificationMode.Age.ToApiString());
+        Assert.Equal("identity", VerificationMode.Identity.ToApiString());
+    }
+
+    [Fact]
+    public void DocumentType_ToApiString()
+    {
+        Assert.Equal("passport", DocumentType.Passport.ToApiString());
+        Assert.Equal("id_card", DocumentType.IdCard.ToApiString());
+        Assert.Equal("drivers_license", DocumentType.DriversLicense.ToApiString());
+    }
+
+    [Fact]
+    public void VerificationStatus_ToApiString()
+    {
+        Assert.Equal("verified", VerificationStatus.Verified.ToApiString());
+        Assert.Equal("failed", VerificationStatus.Failed.ToApiString());
+        Assert.Equal("needs_review", VerificationStatus.NeedsReview.ToApiString());
+    }
+
+    [Fact]
+    public void VerificationSessionStatus_ToApiString()
+    {
+        Assert.Equal("pending", VerificationSessionStatus.Pending.ToApiString());
+        Assert.Equal("in_progress", VerificationSessionStatus.InProgress.ToApiString());
+        Assert.Equal("completed", VerificationSessionStatus.Completed.ToApiString());
+        Assert.Equal("failed", VerificationSessionStatus.Failed.ToApiString());
+        Assert.Equal("expired", VerificationSessionStatus.Expired.ToApiString());
+        Assert.Equal("cancelled", VerificationSessionStatus.Cancelled.ToApiString());
+    }
+
+    [Theory]
+    [InlineData("age", VerificationMode.Age)]
+    [InlineData("identity", VerificationMode.Identity)]
+    [InlineData(null, VerificationMode.Age)]
+    public void ParseVerificationMode(string? input, VerificationMode expected)
+    {
+        Assert.Equal(expected, EnumExtensions.ParseVerificationMode(input));
+    }
+
+    [Theory]
+    [InlineData("verified", VerificationStatus.Verified)]
+    [InlineData("failed", VerificationStatus.Failed)]
+    [InlineData("needs_review", VerificationStatus.NeedsReview)]
+    [InlineData(null, VerificationStatus.Failed)]
+    public void ParseVerificationStatus(string? input, VerificationStatus expected)
+    {
+        Assert.Equal(expected, EnumExtensions.ParseVerificationStatus(input));
+    }
+
+    [Theory]
+    [InlineData("pending", VerificationSessionStatus.Pending)]
+    [InlineData("in_progress", VerificationSessionStatus.InProgress)]
+    [InlineData("completed", VerificationSessionStatus.Completed)]
+    [InlineData("expired", VerificationSessionStatus.Expired)]
+    [InlineData("cancelled", VerificationSessionStatus.Cancelled)]
+    [InlineData(null, VerificationSessionStatus.Pending)]
+    public void ParseVerificationSessionStatus(string? input, VerificationSessionStatus expected)
+    {
+        Assert.Equal(expected, EnumExtensions.ParseVerificationSessionStatus(input));
+    }
+
+    [Fact]
+    public async Task CreateVerificationSession_sends_correct_body()
+    {
+        var handler = MockHandler.WithJson(new
+        {
+            session_id = "sess_abc123",
+            mobile_url = "https://verify.tuteliq.ai/age/?session=abc123&token=xyz",
+            expires_at = "2025-12-31T23:59:59Z",
+            mode = "age"
+        });
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        var result = await client.CreateVerificationSessionAsync(new CreateVerificationSessionInput
+        {
+            Mode = VerificationMode.Age,
+            DocumentType = DocumentType.Passport,
+            ExternalId = "ext-1"
+        });
+
+        Assert.Equal("sess_abc123", result.SessionId);
+        Assert.Equal("https://verify.tuteliq.ai/age/?session=abc123&token=xyz", result.Url);
+        Assert.Equal(VerificationMode.Age, result.Mode);
+
+        var body = handler.RequestBodies[0];
+        Assert.Contains("\"mode\"", body);
+        Assert.Contains("\"age\"", body);
+        Assert.Contains("\"document_type\"", body);
+        Assert.Contains("\"passport\"", body);
+    }
+
+    [Fact]
+    public async Task GetVerificationSession_returns_result()
+    {
+        var handler = MockHandler.WithJson(new
+        {
+            session_id = "sess_abc",
+            status = "completed",
+            result = new
+            {
+                status = "verified",
+                age = 25,
+                is_minor = false
+            }
+        });
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        var result = await client.GetVerificationSessionAsync("sess_abc");
+
+        Assert.Equal("sess_abc", result.SessionId);
+        Assert.Equal(VerificationSessionStatus.Completed, result.Status);
+        Assert.NotNull(result.Result);
+    }
+
+    [Fact]
+    public async Task GetAgeVerification_returns_result()
+    {
+        var handler = MockHandler.WithJson(new
+        {
+            verification_id = "vrf_789",
+            status = "verified",
+            age = 25,
+            is_minor = false,
+            face_matched = true,
+            face_confidence = 0.97,
+            liveness_valid = true,
+            failure_reasons = Array.Empty<string>(),
+            created_at = "2025-01-01T00:00:00Z"
+        });
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        var result = await client.GetAgeVerificationAsync("vrf_789");
+
+        Assert.Equal("vrf_789", result.VerificationId);
+        Assert.Equal(VerificationStatus.Verified, result.Status);
+        Assert.Equal(25, result.Age);
+        Assert.False(result.IsMinor);
+        Assert.True(result.FaceMatched);
+    }
+
+    [Fact]
+    public async Task GetIdentityVerification_returns_result()
+    {
+        var handler = MockHandler.WithJson(new
+        {
+            verification_id = "vrf_101",
+            status = "verified",
+            full_name = "John Doe",
+            date_of_birth = "1990-01-15",
+            document_type = "passport",
+            country_code = "GB",
+            face_matched = true,
+            face_confidence = 0.96,
+            liveness_valid = true,
+            failure_reasons = Array.Empty<string>(),
+            created_at = "2025-01-01T00:00:00Z"
+        });
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        var result = await client.GetIdentityVerificationAsync("vrf_101");
+
+        Assert.Equal("vrf_101", result.VerificationId);
+        Assert.Equal(VerificationStatus.Verified, result.Status);
+        Assert.Equal("John Doe", result.FullName);
+        Assert.Equal("GB", result.CountryCode);
+    }
+
+    [Fact]
+    public async Task CancelVerificationSession_calls_correct_endpoint()
+    {
+        var handler = MockHandler.WithJson(new { message = "Session cancelled" });
+
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        var result = await client.CancelVerificationSessionAsync("sess_abc");
+
+        Assert.Equal("Session cancelled", result.Message);
+        Assert.Equal(HttpMethod.Delete, handler.Requests[0].Method);
+        Assert.Equal("/api/v1/verify/session/sess_abc", handler.Requests[0].RequestUri?.AbsolutePath);
+    }
+}
