@@ -1140,6 +1140,273 @@ public class VideoAnalysisResult
 }
 
 // =============================================================================
+// Verification
+// =============================================================================
+
+/// <summary>
+/// Input for creating a verification session.
+/// </summary>
+public class CreateVerificationSessionInput
+{
+    /// <summary>Type of verification to perform.</summary>
+    public VerificationMode Mode { get; set; }
+    /// <summary>Preferred document type (optional hint).</summary>
+    public DocumentType? DocumentType { get; set; }
+    /// <summary>URL to redirect after verification completes.</summary>
+    public string? RedirectUrl { get; set; }
+    /// <summary>Your external reference ID.</summary>
+    public string? ExternalId { get; set; }
+    /// <summary>Your end-customer identifier.</summary>
+    public string? CustomerId { get; set; }
+    /// <summary>Custom key-value metadata.</summary>
+    public Dictionary<string, object>? Metadata { get; set; }
+}
+
+/// <summary>
+/// Result from creating a verification session.
+/// </summary>
+public class VerificationSessionResponse
+{
+    [JsonPropertyName("session_id")]
+    public string SessionId { get; set; } = "";
+
+    [JsonPropertyName("mobile_url")]
+    public string MobileUrl { get; set; } = "";
+
+    [JsonPropertyName("expires_at")]
+    public string ExpiresAt { get; set; } = "";
+
+    [JsonPropertyName("mode")]
+    public string ModeRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationMode Mode => EnumExtensions.ParseVerificationMode(ModeRaw);
+
+    /// <summary>URL to open for the user to complete verification (mapped from mobile_url).</summary>
+    [JsonIgnore]
+    public string Url => MobileUrl;
+}
+
+/// <summary>
+/// Face comparison results.
+/// </summary>
+public class FaceMatchResult
+{
+    [JsonPropertyName("matched")]
+    public bool Matched { get; set; }
+
+    [JsonPropertyName("distance")]
+    public double Distance { get; set; }
+
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+}
+
+/// <summary>
+/// Liveness check results.
+/// </summary>
+public class LivenessResult
+{
+    [JsonPropertyName("valid")]
+    public bool Valid { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Age verification result.
+/// </summary>
+public class AgeVerificationResult
+{
+    [JsonPropertyName("verification_id")]
+    public string VerificationId { get; set; } = "";
+
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationStatus Status => EnumExtensions.ParseVerificationStatus(StatusRaw);
+
+    [JsonPropertyName("age_bracket")]
+    public string? AgeBracket { get; set; }
+
+    [JsonPropertyName("is_minor")]
+    public bool? IsMinor { get; set; }
+
+    [JsonPropertyName("face_match")]
+    public FaceMatchResult? FaceMatch { get; set; }
+
+    [JsonPropertyName("liveness")]
+    public LivenessResult? Liveness { get; set; }
+
+    [JsonPropertyName("failure_reasons")]
+    public List<string> FailureReasons { get; set; } = new();
+
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+}
+
+/// <summary>
+/// Identity verification result.
+/// </summary>
+public class IdentityVerificationResult
+{
+    [JsonPropertyName("verification_id")]
+    public string VerificationId { get; set; } = "";
+
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationStatus Status => EnumExtensions.ParseVerificationStatus(StatusRaw);
+
+    [JsonPropertyName("full_name")]
+    public string? FullName { get; set; }
+
+    [JsonPropertyName("date_of_birth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("document_type")]
+    public string? DocumentTypeRaw { get; set; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; set; }
+
+    [JsonPropertyName("face_match")]
+    public FaceMatchResult? FaceMatch { get; set; }
+
+    [JsonPropertyName("liveness")]
+    public LivenessResult? Liveness { get; set; }
+
+    [JsonPropertyName("failure_reasons")]
+    public List<string> FailureReasons { get; set; } = new();
+
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+}
+
+/// <summary>
+/// Result from polling a verification session.
+/// </summary>
+public class VerificationSessionResult
+{
+    [JsonPropertyName("session_id")]
+    public string SessionId { get; set; } = "";
+
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationSessionStatus Status => EnumExtensions.ParseVerificationSessionStatus(StatusRaw);
+
+    [JsonPropertyName("mode")]
+    public string ModeRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationMode Mode => EnumExtensions.ParseVerificationMode(ModeRaw);
+
+    [JsonPropertyName("age_result")]
+    public AgeVerificationResult? AgeResult { get; set; }
+
+    [JsonPropertyName("identity_result")]
+    public IdentityVerificationResult? IdentityResult { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = "";
+
+    [JsonPropertyName("expires_at")]
+    public string ExpiresAt { get; set; } = "";
+}
+
+/// <summary>
+/// Result from retrieving a past age verification.
+/// </summary>
+public class VerificationRetrieveResult
+{
+    [JsonPropertyName("verification_id")]
+    public string VerificationId { get; set; } = "";
+
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationStatus Status => EnumExtensions.ParseVerificationStatus(StatusRaw);
+
+    [JsonPropertyName("age")]
+    public int? Age { get; set; }
+
+    [JsonPropertyName("is_minor")]
+    public bool? IsMinor { get; set; }
+
+    [JsonPropertyName("face_matched")]
+    public bool? FaceMatched { get; set; }
+
+    [JsonPropertyName("face_confidence")]
+    public double? FaceConfidence { get; set; }
+
+    [JsonPropertyName("liveness_valid")]
+    public bool LivenessValid { get; set; }
+
+    [JsonPropertyName("failure_reasons")]
+    public List<string> FailureReasons { get; set; } = new();
+
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = "";
+}
+
+/// <summary>
+/// Result from retrieving a past identity verification.
+/// </summary>
+public class IdentityRetrieveResult
+{
+    [JsonPropertyName("verification_id")]
+    public string VerificationId { get; set; } = "";
+
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationStatus Status => EnumExtensions.ParseVerificationStatus(StatusRaw);
+
+    [JsonPropertyName("full_name")]
+    public string? FullName { get; set; }
+
+    [JsonPropertyName("date_of_birth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("document_type")]
+    public string? DocumentTypeRaw { get; set; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; set; }
+
+    [JsonPropertyName("face_matched")]
+    public bool? FaceMatched { get; set; }
+
+    [JsonPropertyName("face_confidence")]
+    public double? FaceConfidence { get; set; }
+
+    [JsonPropertyName("liveness_valid")]
+    public bool LivenessValid { get; set; }
+
+    [JsonPropertyName("failure_reasons")]
+    public List<string> FailureReasons { get; set; } = new();
+
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = "";
+}
+
+/// <summary>
+/// Result from cancelling a verification session.
+/// </summary>
+public class CancelVerificationSessionResult
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
+}
+
+// =============================================================================
 // Webhooks
 // =============================================================================
 

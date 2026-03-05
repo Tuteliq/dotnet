@@ -754,6 +754,54 @@ public class TuteliqClient : IDisposable
     }
 
     // =========================================================================
+    // Verification
+    // =========================================================================
+
+    /// <summary>
+    /// Create a verification session and get a URL for the user to complete verification.
+    /// </summary>
+    public async Task<VerificationSessionResponse> CreateVerificationSessionAsync(CreateVerificationSessionInput input, CancellationToken ct = default)
+    {
+        var body = new Dictionary<string, object?> { ["mode"] = input.Mode.ToApiString() };
+        if (input.DocumentType.HasValue) body["document_type"] = input.DocumentType.Value.ToApiString();
+        if (input.RedirectUrl != null) body["redirect_url"] = input.RedirectUrl;
+        AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
+        return await RequestWithRetryAsync<VerificationSessionResponse>(HttpMethod.Post, "/api/v1/verify/session", body, ct);
+    }
+
+    /// <summary>
+    /// Poll a verification session for its current status and result.
+    /// </summary>
+    public async Task<VerificationSessionResult> GetVerificationSessionAsync(string sessionId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<VerificationSessionResult>(HttpMethod.Get, $"/api/v1/verify/session/{sessionId}", null, ct);
+    }
+
+    /// <summary>
+    /// Cancel an active verification session.
+    /// </summary>
+    public async Task<CancelVerificationSessionResult> CancelVerificationSessionAsync(string sessionId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<CancelVerificationSessionResult>(HttpMethod.Delete, $"/api/v1/verify/session/{sessionId}", null, ct);
+    }
+
+    /// <summary>
+    /// Retrieve a past age verification result by ID.
+    /// </summary>
+    public async Task<VerificationRetrieveResult> GetAgeVerificationAsync(string verificationId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<VerificationRetrieveResult>(HttpMethod.Get, $"/api/v1/verify/age/{verificationId}", null, ct);
+    }
+
+    /// <summary>
+    /// Retrieve a past identity verification result by ID.
+    /// </summary>
+    public async Task<IdentityRetrieveResult> GetIdentityVerificationAsync(string verificationId, CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<IdentityRetrieveResult>(HttpMethod.Get, $"/api/v1/verify/identity/{verificationId}", null, ct);
+    }
+
+    // =========================================================================
     // Voice Streaming
     // =========================================================================
 
