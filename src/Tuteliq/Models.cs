@@ -325,6 +325,9 @@ public class GroomingResult
     [JsonPropertyName("language_status")]
     public string? LanguageStatusRaw { get; set; }
 
+    [JsonPropertyName("message_analysis")]
+    public List<MessageAnalysis>? MessageAnalysis { get; set; }
+
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; set; }
 }
@@ -932,6 +935,24 @@ public class AnalyseMultiInput
 }
 
 /// <summary>
+/// Per-message analysis from conversation-aware detection.
+/// </summary>
+public class MessageAnalysis
+{
+    [JsonPropertyName("message_index")]
+    public int MessageIndex { get; init; }
+
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; init; }
+
+    [JsonPropertyName("flags")]
+    public List<string> Flags { get; init; } = new();
+
+    [JsonPropertyName("summary")]
+    public string Summary { get; init; } = "";
+}
+
+/// <summary>
 /// A category detected in fraud/safety analysis.
 /// </summary>
 public class DetectionCategory
@@ -1019,6 +1040,9 @@ public class DetectionResult
 
     [JsonPropertyName("age_calibration")]
     public AgeCalibration? AgeCalibration { get; init; }
+
+    [JsonPropertyName("message_analysis")]
+    public List<MessageAnalysis>? MessageAnalysis { get; init; }
 
     [JsonPropertyName("credits_used")]
     public int? CreditsUsed { get; init; }
