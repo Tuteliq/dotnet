@@ -293,6 +293,43 @@ result.Categories            // List<string>
 result.RecommendedNextSteps  // List<string>
 ```
 
+### Age Verification (Beta)
+
+> **Pro tier ($99/mo)+ — 5 credits per request — POST /v1/verification/age**
+
+```csharp
+var ageResult = await client.VerifyAgeAsync(new VerifyAgeRequest
+{
+    Document = File.OpenRead("id-front.jpg"),
+    Selfie = File.OpenRead("selfie.jpg"),
+    Method = VerificationMethod.Combined // Document | Biometric | Combined
+});
+
+Console.WriteLine(ageResult.Verified);       // True
+Console.WriteLine(ageResult.EstimatedAge);   // 15
+Console.WriteLine(ageResult.AgeRange);       // "13-15"
+Console.WriteLine(ageResult.IsMinor);        // True
+Console.WriteLine(ageResult.Confidence);     // 0.97
+```
+
+### Identity Verification (Beta)
+
+> **Business tier ($349/mo)+ — 10 credits per request — POST /v1/verification/identity**
+
+```csharp
+var identityResult = await client.VerifyIdentityAsync(new VerifyIdentityRequest
+{
+    Document = File.OpenRead("id-front.jpg"),
+    Selfie = File.OpenRead("selfie.jpg")
+});
+
+Console.WriteLine(identityResult.Verified);               // True
+Console.WriteLine(identityResult.MatchScore);             // 0.98
+Console.WriteLine(identityResult.LivenessPassed);         // True
+Console.WriteLine(identityResult.DocumentAuthenticated);  // True
+Console.WriteLine(identityResult.IsMinor);               // False
+```
+
 ### Voice Streaming
 
 Real-time voice analysis over WebSocket:
