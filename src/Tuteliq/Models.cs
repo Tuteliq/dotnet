@@ -1306,17 +1306,14 @@ public class VerificationSessionResult
     [JsonIgnore]
     public VerificationMode Mode => EnumExtensions.ParseVerificationMode(ModeRaw);
 
-    [JsonPropertyName("age_result")]
-    public AgeVerificationResult? AgeResult { get; set; }
-
-    [JsonPropertyName("identity_result")]
-    public IdentityVerificationResult? IdentityResult { get; set; }
+    [JsonPropertyName("result")]
+    public JsonElement? Result { get; set; }
 
     [JsonPropertyName("created_at")]
-    public string CreatedAt { get; set; } = "";
+    public string? CreatedAt { get; set; }
 
     [JsonPropertyName("expires_at")]
-    public string ExpiresAt { get; set; } = "";
+    public string? ExpiresAt { get; set; }
 }
 
 /// <summary>

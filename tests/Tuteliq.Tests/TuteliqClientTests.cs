@@ -861,18 +861,11 @@ public class VerificationTests
         {
             session_id = "sess_abc",
             status = "completed",
-            mode = "age",
-            created_at = "2025-01-01T00:00:00Z",
-            expires_at = "2025-01-01T01:00:00Z",
-            age_result = new
+            result = new
             {
-                verification_id = "vrf_123",
                 status = "verified",
-                age_bracket = "18-25",
-                is_minor = false,
-                liveness = new { valid = true },
-                failure_reasons = Array.Empty<string>(),
-                credits_used = 10
+                age = 25,
+                is_minor = false
             }
         });
 
@@ -883,10 +876,7 @@ public class VerificationTests
 
         Assert.Equal("sess_abc", result.SessionId);
         Assert.Equal(VerificationSessionStatus.Completed, result.Status);
-        Assert.Equal(VerificationMode.Age, result.Mode);
-        Assert.NotNull(result.AgeResult);
-        Assert.Equal(VerificationStatus.Verified, result.AgeResult!.Status);
-        Assert.Equal("18-25", result.AgeResult.AgeBracket);
+        Assert.NotNull(result.Result);
     }
 
     [Fact]
