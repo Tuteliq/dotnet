@@ -23,6 +23,9 @@ var result = await client.DetectUnsafeAsync(text: "content to check", ageGroup: 
 - Age Verification (Beta) — POST /v1/verification/age — Pro tier ($99/mo)+, 5 credits
 - Identity Verification (Beta) — POST /v1/verification/identity — Business tier ($349/mo)+, 10 credits
 
+## Supported Languages
+27 languages: English (stable), Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish (beta). Auto-detected, no configuration needed.
+
 ## Links
 - Website: https://tuteliq.ai
 - Documentation: https://docs.tuteliq.ai
