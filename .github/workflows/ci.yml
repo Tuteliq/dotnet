@@ -24,6 +24,9 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Audit dependencies
+        run: dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.log && ! grep -q 'has the following vulnerable packages' audit.log
+
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
