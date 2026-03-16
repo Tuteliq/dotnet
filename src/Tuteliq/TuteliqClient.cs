@@ -642,6 +642,43 @@ public class TuteliqClient : IDisposable
     }
 
     // =========================================================================
+    // Document Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Analyze a PDF document for safety and compliance concerns.
+    /// Extracts text from each page, runs detection endpoints in parallel,
+    /// and returns per-page results with an overall risk assessment.
+    /// Zero-retention: no document data is stored after processing.
+    /// </summary>
+    /// <param name="input">Document analysis input including PDF file and options.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Per-page detection results with overall risk assessment.</returns>
+    public async Task<DocumentAnalysisResult> AnalyzeDocumentAsync(
+        AnalyzeDocumentInput input,
+        CancellationToken ct = default)
+    {
+        if (input.File == null || input.File.Length == 0)
+            throw new ValidationException("PDF file is required");
+        if (string.IsNullOrWhiteSpace(input.Filename))
+            throw new ValidationException("Filename is required");
+
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(input.File), "file", input.Filename);
+        content.Add(new StringContent(ResolvePlatform(input.Platform)), "platform");
+        if (input.Endpoints != null && input.Endpoints.Count > 0)
+            content.Add(new StringContent(JsonSerializer.Serialize(input.Endpoints, JsonOptions)), "endpoints");
+        if (input.FileId != null) content.Add(new StringContent(input.FileId), "file_id");
+        if (input.ExternalId != null) content.Add(new StringContent(input.ExternalId), "external_id");
+        if (input.CustomerId != null) content.Add(new StringContent(input.CustomerId), "customer_id");
+        if (input.Metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(input.Metadata, JsonOptions)), "metadata");
+        if (input.AgeGroup != null) content.Add(new StringContent(input.AgeGroup), "age_group");
+        if (input.Language != null) content.Add(new StringContent(input.Language), "language");
+        if (input.SupportThreshold != null) content.Add(new StringContent(input.SupportThreshold), "support_threshold");
+        return await MultipartRequestAsync<DocumentAnalysisResult>("/api/v1/safety/document", content, ct);
+    }
+
+    // =========================================================================
     // Webhooks
     // =========================================================================
 

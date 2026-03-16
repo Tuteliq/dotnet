@@ -1633,6 +1633,277 @@ public class UsageByToolResult
     public Dictionary<string, int> Endpoints { get; set; } = new();
 }
 
+// =============================================================================
+// Document Analysis
+// =============================================================================
+
+/// <summary>
+/// Valid endpoint names for document analysis.
+/// </summary>
+public static class DocumentEndpointName
+{
+    public const string Unsafe = "unsafe";
+    public const string Bullying = "bullying";
+    public const string Grooming = "grooming";
+    public const string SocialEngineering = "social-engineering";
+    public const string CoerciveControl = "coercive-control";
+    public const string Radicalisation = "radicalisation";
+    public const string RomanceScam = "romance-scam";
+    public const string MuleRecruitment = "mule-recruitment";
+
+    /// <summary>Returns all valid endpoint names.</summary>
+    public static readonly string[] All = new[]
+    {
+        Unsafe, Bullying, Grooming, SocialEngineering,
+        CoerciveControl, Radicalisation, RomanceScam, MuleRecruitment
+    };
+}
+
+/// <summary>
+/// Input for document safety analysis.
+/// </summary>
+public class AnalyzeDocumentInput
+{
+    /// <summary>PDF file contents as a byte array.</summary>
+    public required byte[] File { get; init; }
+
+    /// <summary>Original filename (e.g., "report.pdf").</summary>
+    public required string Filename { get; init; }
+
+    /// <summary>Detection endpoints to run on each page. Defaults to unsafe, coercive-control, radicalisation.</summary>
+    public List<string>? Endpoints { get; init; }
+
+    /// <summary>Customer-provided file reference ID (echoed in response).</summary>
+    public string? FileId { get; init; }
+
+    /// <summary>Age group for calibrated analysis (e.g. "7-10", "11-13", "14-17").</summary>
+    public string? AgeGroup { get; init; }
+
+    /// <summary>Language hint (ISO 639-1). Auto-detected if omitted.</summary>
+    public string? Language { get; init; }
+
+    /// <summary>Platform name.</summary>
+    public string? Platform { get; init; }
+
+    /// <summary>Minimum severity to include crisis helplines. Default: "high".</summary>
+    public string? SupportThreshold { get; init; }
+
+    /// <summary>Your unique identifier for correlation with your systems (max 255 chars).</summary>
+    public string? ExternalId { get; init; }
+
+    /// <summary>Your end-customer identifier for multi-tenant / B2B2C routing (max 255 chars).</summary>
+    public string? CustomerId { get; init; }
+
+    /// <summary>Arbitrary key-value pairs for your own use.</summary>
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+/// <summary>
+/// Breakdown of how text was extracted from the document pages.
+/// </summary>
+public class DocumentExtractionSummary
+{
+    /// <summary>Pages where text was extracted from the PDF text layer.</summary>
+    [JsonPropertyName("text_layer_pages")]
+    public int TextLayerPages { get; set; }
+
+    /// <summary>Pages where OCR was used.</summary>
+    [JsonPropertyName("ocr_pages")]
+    public int OcrPages { get; set; }
+
+    /// <summary>Pages with insufficient text for analysis.</summary>
+    [JsonPropertyName("failed_pages")]
+    public int FailedPages { get; set; }
+
+    /// <summary>Average OCR confidence (0.0-1.0) across OCR pages.</summary>
+    [JsonPropertyName("average_ocr_confidence")]
+    public double AverageOcrConfidence { get; set; }
+}
+
+/// <summary>
+/// Detection result for a single endpoint on a single page.
+/// </summary>
+public class DocumentPageEndpointResult
+{
+    /// <summary>Endpoint name.</summary>
+    [JsonPropertyName("endpoint")]
+    public string Endpoint { get; set; } = "";
+
+    /// <summary>Whether a threat was detected.</summary>
+    [JsonPropertyName("detected")]
+    public bool Detected { get; set; }
+
+    /// <summary>Severity score (0-1).</summary>
+    [JsonPropertyName("severity")]
+    public double Severity { get; set; }
+
+    /// <summary>Confidence score (0-1).</summary>
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+
+    /// <summary>Risk score (0-1).</summary>
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    /// <summary>Risk level.</summary>
+    [JsonPropertyName("level")]
+    public string Level { get; set; } = "";
+
+    /// <summary>Detected categories.</summary>
+    [JsonPropertyName("categories")]
+    public List<DetectionCategory> Categories { get; set; } = new();
+
+    /// <summary>Evidence excerpts.</summary>
+    [JsonPropertyName("evidence")]
+    public List<DetectionEvidence> Evidence { get; set; } = new();
+
+    /// <summary>Recommended action.</summary>
+    [JsonPropertyName("recommended_action")]
+    public string RecommendedAction { get; set; } = "";
+
+    /// <summary>Human-readable rationale.</summary>
+    [JsonPropertyName("rationale")]
+    public string Rationale { get; set; } = "";
+
+    /// <summary>Detected language.</summary>
+    [JsonPropertyName("detected_language")]
+    public string? DetectedLanguage { get; set; }
+}
+
+/// <summary>
+/// Analysis result for a single page of a document.
+/// </summary>
+public class DocumentPageResult
+{
+    /// <summary>Page number (1-indexed).</summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>First 200 characters of page text.</summary>
+    [JsonPropertyName("text_preview")]
+    public string TextPreview { get; set; } = "";
+
+    /// <summary>How text was extracted (text_layer or ocr).</summary>
+    [JsonPropertyName("extraction_method")]
+    public string ExtractionMethod { get; set; } = "";
+
+    /// <summary>OCR confidence if applicable.</summary>
+    [JsonPropertyName("ocr_confidence")]
+    public double? OcrConfidence { get; set; }
+
+    /// <summary>Detection results per endpoint.</summary>
+    [JsonPropertyName("results")]
+    public List<DocumentPageEndpointResult> Results { get; set; } = new();
+
+    /// <summary>Highest risk score on this page.</summary>
+    [JsonPropertyName("page_risk_score")]
+    public double PageRiskScore { get; set; }
+
+    /// <summary>Page severity level.</summary>
+    [JsonPropertyName("page_severity")]
+    public string PageSeverity { get; set; } = "";
+}
+
+/// <summary>
+/// A flagged page with elevated risk.
+/// </summary>
+public class DocumentFlaggedPage
+{
+    /// <summary>Page number.</summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>Risk score.</summary>
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    /// <summary>Severity level.</summary>
+    [JsonPropertyName("severity")]
+    public string Severity { get; set; } = "";
+
+    /// <summary>Endpoints that detected threats on this page.</summary>
+    [JsonPropertyName("detected_endpoints")]
+    public List<string> DetectedEndpoints { get; set; } = new();
+}
+
+/// <summary>
+/// Result of document safety analysis.
+/// </summary>
+public class DocumentAnalysisResult
+{
+    /// <summary>Customer-provided file reference (if provided).</summary>
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; set; }
+
+    /// <summary>SHA-256 hash of the uploaded PDF for chain-of-custody verification.</summary>
+    [JsonPropertyName("document_hash")]
+    public string DocumentHash { get; set; } = "";
+
+    /// <summary>Total pages in the document.</summary>
+    [JsonPropertyName("total_pages")]
+    public int TotalPages { get; set; }
+
+    /// <summary>Pages with extractable text that were analyzed.</summary>
+    [JsonPropertyName("pages_analyzed")]
+    public int PagesAnalyzed { get; set; }
+
+    /// <summary>Breakdown of text extraction results.</summary>
+    [JsonPropertyName("extraction_summary")]
+    public DocumentExtractionSummary ExtractionSummary { get; set; } = new();
+
+    /// <summary>Per-page detection results.</summary>
+    [JsonPropertyName("page_results")]
+    public List<DocumentPageResult> PageResults { get; set; } = new();
+
+    /// <summary>Highest risk score across all pages (0-1).</summary>
+    [JsonPropertyName("overall_risk_score")]
+    public double OverallRiskScore { get; set; }
+
+    /// <summary>Overall severity level.</summary>
+    [JsonPropertyName("overall_severity")]
+    public string OverallSeverity { get; set; } = "";
+
+    /// <summary>Unique list of endpoints that detected threats.</summary>
+    [JsonPropertyName("detected_endpoints")]
+    public List<string> DetectedEndpoints { get; set; } = new();
+
+    /// <summary>Pages with risk score >= 0.3.</summary>
+    [JsonPropertyName("flagged_pages")]
+    public List<DocumentFlaggedPage> FlaggedPages { get; set; } = new();
+
+    /// <summary>Dynamic credit cost based on pages analyzed and endpoints used.</summary>
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+
+    /// <summary>Processing time in milliseconds.</summary>
+    [JsonPropertyName("processing_time_ms")]
+    public long ProcessingTimeMs { get; set; }
+
+    /// <summary>Detected language.</summary>
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    /// <summary>Language support status.</summary>
+    [JsonPropertyName("language_status")]
+    public string? LanguageStatus { get; set; }
+
+    /// <summary>Crisis support resources (if triggered).</summary>
+    [JsonPropertyName("support")]
+    public JsonElement? Support { get; set; }
+
+    /// <summary>Echo of provided external_id.</summary>
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; set; }
+
+    /// <summary>Echo of provided customer_id.</summary>
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
+    /// <summary>Echo of provided metadata.</summary>
+    [JsonPropertyName("metadata")]
+    public JsonElement? Metadata { get; set; }
+}
+
 /// <summary>
 /// Result from getting monthly usage summary.
 /// </summary>

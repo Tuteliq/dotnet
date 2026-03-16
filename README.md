@@ -35,6 +35,7 @@ Tuteliq provides AI-powered content analysis to help protect children in digital
 - **Bullying Detection** — Identify verbal abuse, exclusion, and harassment patterns
 - **Grooming Risk Analysis** — Detect predatory behavior across conversation threads
 - **Unsafe Content Detection** — Flag self-harm, violence, hate speech, and age-inappropriate content
+- **Document Analysis** — Upload PDFs for per-page multi-endpoint safety detection with chain-of-custody hashing
 - **Emotional State Analysis** — Understand emotional signals and concerning trends
 - **Action Guidance** — Generate age-appropriate response recommendations
 - **Incident Reports** — Create professional summaries for review
@@ -350,6 +351,50 @@ await session.SendAudioAsync(audioBytes);
 // End session and get summary
 var summary = await session.EndAsync();
 ```
+
+### Document Analysis
+
+Upload a PDF for per-page multi-endpoint safety analysis. Text is extracted from each page, detection endpoints run in parallel, and results are aggregated with an overall risk assessment. Zero-retention: no document data is stored after processing.
+
+```csharp
+var result = await client.AnalyzeDocumentAsync(new AnalyzeDocumentInput
+{
+    File = File.ReadAllBytes("report.pdf"),
+    Filename = "report.pdf",
+    Endpoints = new List<string>
+    {
+        DocumentEndpointName.Unsafe,
+        DocumentEndpointName.CoerciveControl,
+        DocumentEndpointName.Radicalisation
+    },
+    AgeGroup = "13-15",               // Optional: age-calibrated scoring
+    Language = "en",                   // Optional: auto-detected if omitted
+    FileId = "doc-ref-789",           // Optional: echoed in response
+    SupportThreshold = "high"         // Optional: when to include crisis helplines
+});
+
+Console.WriteLine(result.DocumentHash);         // SHA-256 for chain-of-custody
+Console.WriteLine(result.TotalPages);           // Total pages in PDF
+Console.WriteLine(result.PagesAnalyzed);        // Pages with extractable text
+Console.WriteLine(result.OverallRiskScore);     // 0.0 - 1.0
+Console.WriteLine(result.OverallSeverity);      // "none", "low", "medium", "high", "critical"
+Console.WriteLine(result.FlaggedPages.Count);   // Pages with risk >= 0.3
+Console.WriteLine(result.DetectedEndpoints);    // Endpoints that found threats
+Console.WriteLine(result.CreditsUsed);          // Dynamic: max(3, pages x endpoints)
+
+// Per-page results
+foreach (var page in result.PageResults)
+{
+    Console.WriteLine($"Page {page.PageNumber}: {page.PageSeverity}");
+    foreach (var r in page.Results)
+    {
+        if (r.Detected)
+            Console.WriteLine($"  {r.Endpoint}: {r.Rationale}");
+    }
+}
+```
+
+Available endpoints: `unsafe`, `bullying`, `grooming`, `social-engineering`, `coercive-control`, `radicalisation`, `romance-scam`, `mule-recruitment`. Supported format: PDF only (max 50MB, 100 pages).
 
 ### Credits Used
 
