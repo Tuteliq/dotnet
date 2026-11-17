@@ -1972,3 +1972,955 @@ public class UsageMonthlyResult
     [JsonPropertyName("links")]
     public JsonElement Links { get; set; }
 }
+
+/// <summary>
+/// Daily usage summary for the current API key.
+/// </summary>
+public class UsageSummaryResult
+{
+    [JsonPropertyName("apiKeyId")]
+    public string ApiKeyId { get; set; } = "";
+
+    [JsonPropertyName("tier")]
+    public string Tier { get; set; } = "";
+
+    [JsonPropertyName("date")]
+    public string Date { get; set; } = "";
+
+    [JsonPropertyName("usage")]
+    public UsageSummaryCounts Usage { get; set; } = new();
+
+    [JsonPropertyName("quota")]
+    public UsageSummaryQuota Quota { get; set; } = new();
+}
+
+/// <summary>
+/// Request counts for one day.
+/// </summary>
+public class UsageSummaryCounts
+{
+    [JsonPropertyName("totalRequests")]
+    public long TotalRequests { get; set; }
+
+    [JsonPropertyName("successRequests")]
+    public long SuccessRequests { get; set; }
+
+    [JsonPropertyName("errorRequests")]
+    public long ErrorRequests { get; set; }
+}
+
+/// <summary>
+/// Tier limits in a usage summary. -1 means no limit.
+/// </summary>
+public class UsageSummaryQuota
+{
+    [JsonPropertyName("requestsPerMinute")]
+    public long RequestsPerMinute { get; set; }
+
+    /// <summary>Monthly allowance of the tier. -1 means no limit.</summary>
+    [JsonPropertyName("requestsPerMonth")]
+    public long RequestsPerMonth { get; set; }
+
+    /// <summary>-1 for a paid tier, which has no daily limit.</summary>
+    [JsonPropertyName("requestsPerDay")]
+    public long RequestsPerDay { get; set; }
+
+    /// <summary>-1 for a paid tier, which has no daily limit.</summary>
+    [JsonPropertyName("remainingToday")]
+    public long RemainingToday { get; set; }
+}
+
+/// <summary>
+/// Real-time rate limit and quota status.
+/// </summary>
+public class UsageQuotaResult
+{
+    [JsonPropertyName("apiKeyId")]
+    public string ApiKeyId { get; set; } = "";
+
+    [JsonPropertyName("tier")]
+    public string Tier { get; set; } = "";
+
+    /// <summary>Seconds until the per-minute rate limit window resets.</summary>
+    [JsonPropertyName("resetsInSeconds")]
+    public double? ResetsInSeconds { get; set; }
+
+    [JsonPropertyName("limits")]
+    public UsageQuotaLimits Limits { get; set; } = new();
+
+    [JsonPropertyName("current")]
+    public UsageQuotaCounts Current { get; set; } = new();
+
+    [JsonPropertyName("remaining")]
+    public UsageQuotaCounts Remaining { get; set; } = new();
+}
+
+/// <summary>
+/// Tier limits in a quota status. -1 means no limit.
+/// </summary>
+public class UsageQuotaLimits
+{
+    [JsonPropertyName("requestsPerMinute")]
+    public long RequestsPerMinute { get; set; }
+
+    [JsonPropertyName("requestsPerMonth")]
+    public long RequestsPerMonth { get; set; }
+
+    [JsonPropertyName("requestsPerDay")]
+    public long RequestsPerDay { get; set; }
+}
+
+/// <summary>
+/// Request counts in a quota status.
+/// </summary>
+public class UsageQuotaCounts
+{
+    [JsonPropertyName("requestsThisMinute")]
+    public long RequestsThisMinute { get; set; }
+
+    [JsonPropertyName("requestsToday")]
+    public long RequestsToday { get; set; }
+}
+
+// =============================================================================
+// Distress Signals
+// =============================================================================
+
+/// <summary>
+/// Result of distress signal detection.
+/// </summary>
+public class DistressSignalsResult : DetectionResult
+{
+    /// <summary>
+    /// How the distress words are used: <c>literal_present</c>, <c>about_other</c>, <c>past_resolved</c>,
+    /// <c>figurative</c>, <c>quoted</c> or <c>none</c>.
+    /// </summary>
+    [JsonPropertyName("distress_reading")]
+    public string? DistressReading { get; init; }
+
+    /// <summary>Who the distress is about: <c>speaker</c> or <c>other_party</c>.</summary>
+    [JsonPropertyName("distress_subject")]
+    public string? DistressSubject { get; init; }
+
+    /// <summary>True when a supportive check-in is suggested rather than a moderation case.</summary>
+    [JsonPropertyName("support_suggested")]
+    public bool? SupportSuggested { get; init; }
+}
+
+// =============================================================================
+// Incidents
+// =============================================================================
+
+/// <summary>
+/// Filters and paging for listing incidents. Every filter is optional.
+/// </summary>
+public class ListIncidentsInput
+{
+    /// <summary>Filter by risk category (e.g. "bullying", "grooming").</summary>
+    public string? Category { get; set; }
+    /// <summary>Filter by risk level: low, moderate (or medium), high, critical.</summary>
+    public string? Severity { get; set; }
+    /// <summary>Filter by moderation status: new, reviewed, escalated, resolved, dismissed.</summary>
+    public string? Status { get; set; }
+    /// <summary>Filter by source: text, voice, image, video, video_stream.</summary>
+    public string? Source { get; set; }
+    /// <summary>ISO 8601 inclusive lower bound on created_at.</summary>
+    public string? From { get; set; }
+    /// <summary>ISO 8601 exclusive upper bound on created_at.</summary>
+    public string? To { get; set; }
+    public string? Platform { get; set; }
+    public string? ExternalId { get; set; }
+    public string? CustomerId { get; set; }
+    /// <summary>1 to 100 rows per page (API default 25).</summary>
+    public int? Limit { get; set; }
+    /// <summary>The previous page's <see cref="ListIncidentsResult.NextCursor"/>.</summary>
+    public string? Cursor { get; set; }
+    /// <summary>Include the decrypted summary on each row. Costs an extra credit per row.</summary>
+    public bool IncludeSummary { get; set; }
+}
+
+/// <summary>
+/// One incident in a listing.
+/// </summary>
+public class IncidentSummary
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+
+    [JsonPropertyName("risk_category")]
+    public string RiskCategory { get; set; } = "";
+
+    /// <summary>Stored risk level: low, moderate, high or critical.</summary>
+    [JsonPropertyName("risk_level")]
+    public string RiskLevel { get; set; } = "";
+
+    [JsonPropertyName("confidence_score")]
+    public double? ConfidenceScore { get; set; }
+
+    [JsonPropertyName("detected_patterns")]
+    public List<string> DetectedPatterns { get; set; } = new();
+
+    [JsonPropertyName("recommended_actions")]
+    public List<string> RecommendedActions { get; set; } = new();
+
+    [JsonPropertyName("platform")]
+    public string? Platform { get; set; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = "";
+
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = "";
+
+    /// <summary>Your policy rules' verdict on this incident; null when no rule matched.</summary>
+    [JsonPropertyName("policy_action")]
+    public JsonElement? PolicyAction { get; set; }
+
+    /// <summary>Advisory next status for a moderator. Never applied automatically.</summary>
+    [JsonPropertyName("recommended_status")]
+    public string? RecommendedStatus { get; set; }
+
+    [JsonPropertyName("speaker_stance")]
+    public string? SpeakerStance { get; set; }
+
+    /// <summary>True when the incident came from a non-production API key.</summary>
+    [JsonPropertyName("is_test")]
+    public bool? IsTest { get; set; }
+
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; set; }
+
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = "";
+
+    /// <summary>Summary text, or an encrypted envelope for accounts with their own key. Present when requested.</summary>
+    [JsonPropertyName("summary")]
+    public JsonElement? Summary { get; set; }
+
+    /// <summary>Fields returned as envelopes you decrypt with your registered private key.</summary>
+    [JsonPropertyName("_e2e_envelope_fields")]
+    public List<string>? E2eEnvelopeFields { get; set; }
+}
+
+/// <summary>
+/// A page of incidents, newest first.
+/// </summary>
+public class ListIncidentsResult
+{
+    [JsonPropertyName("incidents")]
+    public List<IncidentSummary> Incidents { get; set; } = new();
+
+    /// <summary>Pass back as <see cref="ListIncidentsInput.Cursor"/>; null when there are no more pages.</summary>
+    [JsonPropertyName("next_cursor")]
+    public string? NextCursor { get; set; }
+
+    [JsonPropertyName("total_returned")]
+    public int TotalReturned { get; set; }
+}
+
+/// <summary>
+/// Risk score and flags for one message of a multi-turn incident.
+/// </summary>
+public class IncidentMessageAnalysis
+{
+    [JsonPropertyName("message_index")]
+    public int MessageIndex { get; set; }
+
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    [JsonPropertyName("flags")]
+    public List<string> Flags { get; set; } = new();
+}
+
+/// <summary>
+/// Full detail of one incident.
+/// </summary>
+public class IncidentDetail : IncidentSummary
+{
+    [JsonPropertyName("metadata")]
+    public JsonElement? Metadata { get; set; }
+
+    [JsonPropertyName("source_data")]
+    public JsonElement? SourceData { get; set; }
+
+    [JsonPropertyName("visual_categories")]
+    public List<string>? VisualCategories { get; set; }
+
+    [JsonPropertyName("visual_severity")]
+    public string? VisualSeverity { get; set; }
+
+    [JsonPropertyName("visual_confidence")]
+    public double? VisualConfidence { get; set; }
+
+    [JsonPropertyName("emotional_indicators")]
+    public List<string>? EmotionalIndicators { get; set; }
+
+    [JsonPropertyName("review")]
+    public JsonElement? Review { get; set; }
+
+    /// <summary>Per-message trajectory for multi-turn incidents; null for single-turn ones.</summary>
+    [JsonPropertyName("message_analysis")]
+    public List<IncidentMessageAnalysis>? MessageAnalysis { get; set; }
+}
+
+/// <summary>
+/// A time window.
+/// </summary>
+public class IncidentTimeframe
+{
+    [JsonPropertyName("from")]
+    public string From { get; set; } = "";
+
+    [JsonPropertyName("to")]
+    public string To { get; set; } = "";
+}
+
+/// <summary>
+/// Incident count for one platform.
+/// </summary>
+public class IncidentPlatformCount
+{
+    [JsonPropertyName("platform")]
+    public string Platform { get; set; } = "";
+
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+}
+
+/// <summary>
+/// Incident KPIs over a time window (default: the last 30 days).
+/// </summary>
+public class IncidentsOverview
+{
+    [JsonPropertyName("timeframe")]
+    public IncidentTimeframe Timeframe { get; set; } = new();
+
+    [JsonPropertyName("total_incidents")]
+    public int TotalIncidents { get; set; }
+
+    /// <summary>High and critical incidents nobody has acted on yet.</summary>
+    [JsonPropertyName("requires_review_count")]
+    public int RequiresReviewCount { get; set; }
+
+    [JsonPropertyName("last_24h_count")]
+    public int Last24hCount { get; set; }
+
+    [JsonPropertyName("last_7d_count")]
+    public int Last7dCount { get; set; }
+
+    [JsonPropertyName("last_30d_count")]
+    public int Last30dCount { get; set; }
+
+    [JsonPropertyName("counts_by_category")]
+    public Dictionary<string, int> CountsByCategory { get; set; } = new();
+
+    [JsonPropertyName("counts_by_severity")]
+    public Dictionary<string, int> CountsBySeverity { get; set; } = new();
+
+    [JsonPropertyName("counts_by_source")]
+    public Dictionary<string, int> CountsBySource { get; set; } = new();
+
+    [JsonPropertyName("counts_by_status")]
+    public Dictionary<string, int> CountsByStatus { get; set; } = new();
+
+    /// <summary>Top 5 platforms by incident count, descending.</summary>
+    [JsonPropertyName("top_platforms")]
+    public List<IncidentPlatformCount> TopPlatforms { get; set; } = new();
+}
+
+/// <summary>
+/// One bucket of an incident trend series.
+/// </summary>
+public class IncidentTrendsBucket
+{
+    [JsonPropertyName("bucket_start")]
+    public string BucketStart { get; set; } = "";
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("by_severity")]
+    public Dictionary<string, int> BySeverity { get; set; } = new();
+}
+
+/// <summary>
+/// Time-bucketed incident counts.
+/// </summary>
+public class IncidentTrends
+{
+    /// <summary>hour, day or week.</summary>
+    [JsonPropertyName("bucket_size")]
+    public string BucketSize { get; set; } = "";
+
+    [JsonPropertyName("timeframe")]
+    public IncidentTimeframe Timeframe { get; set; } = new();
+
+    [JsonPropertyName("series")]
+    public List<IncidentTrendsBucket> Series { get; set; } = new();
+}
+
+/// <summary>
+/// A moderator review of an incident.
+/// </summary>
+public class ReviewIncidentInput
+{
+    public ModeratorAction Action { get; set; }
+    public ModeratorReasonCode ReasonCode { get; set; }
+    /// <summary>Free-form comment (max 4000 characters).</summary>
+    public string? ReasonComment { get; set; }
+    /// <summary>New risk level: required for downgrade and escalate.</summary>
+    public string? NewRiskLevel { get; set; }
+    /// <summary>New category: required for reclassify.</summary>
+    public string? NewRiskCategory { get; set; }
+    /// <summary>
+    /// Stable identifier of the moderator making the decision. Required, so the audit trail can attribute it.
+    /// Use a per-moderator identifier, not the account owner.
+    /// </summary>
+    public string ModeratorExternalId { get; set; } = "";
+    /// <summary>Retention class for the audit receipt: biometric-high-risk, safety-high-risk, limited-risk (default) or minimal-risk.</summary>
+    public string? RetentionClass { get; set; }
+}
+
+/// <summary>
+/// The same moderator review applied to up to 100 incidents.
+/// </summary>
+public class BatchReviewIncidentsInput : ReviewIncidentInput
+{
+    /// <summary>1 to 100 incident IDs.</summary>
+    public List<string> IncidentIds { get; set; } = new();
+}
+
+/// <summary>
+/// An incident's category and level at one point in time.
+/// </summary>
+public class IncidentClassification
+{
+    [JsonPropertyName("risk_category")]
+    public string RiskCategory { get; set; } = "";
+
+    [JsonPropertyName("risk_level")]
+    public string RiskLevel { get; set; } = "";
+}
+
+/// <summary>
+/// Reference to the signed audit receipt for a review.
+/// </summary>
+public class AuditReceiptReference
+{
+    [JsonPropertyName("request_id")]
+    public string RequestId { get; set; } = "";
+
+    [JsonPropertyName("timestamp")]
+    public string Timestamp { get; set; } = "";
+
+    [JsonPropertyName("signature")]
+    public string Signature { get; set; } = "";
+}
+
+/// <summary>
+/// Result of reviewing one incident.
+/// </summary>
+public class ReviewIncidentResult
+{
+    [JsonPropertyName("incident_id")]
+    public string IncidentId { get; set; } = "";
+
+    [JsonPropertyName("original")]
+    public IncidentClassification? Original { get; set; }
+
+    [JsonPropertyName("revised")]
+    public IncidentClassification? Revised { get; set; }
+
+    /// <summary>Null if the receipt write failed but the review succeeded.</summary>
+    [JsonPropertyName("audit_receipt")]
+    public AuditReceiptReference? AuditReceipt { get; set; }
+}
+
+/// <summary>
+/// Outcome for one incident in a batch review.
+/// </summary>
+public class BatchReviewItemResult : ReviewIncidentResult
+{
+    [JsonPropertyName("ok")]
+    public bool Ok { get; set; }
+
+    /// <summary>Present when <see cref="Ok"/> is false.</summary>
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+}
+
+/// <summary>
+/// Result of a batch review.
+/// </summary>
+public class BatchReviewIncidentsResult
+{
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("succeeded")]
+    public int Succeeded { get; set; }
+
+    [JsonPropertyName("failed")]
+    public int Failed { get; set; }
+
+    /// <summary>Per-incident outcome in input order.</summary>
+    [JsonPropertyName("results")]
+    public List<BatchReviewItemResult> Results { get; set; } = new();
+}
+
+// =============================================================================
+// Image Verification
+// =============================================================================
+
+/// <summary>
+/// Input for image verification. Images are processed in memory and never stored.
+/// </summary>
+public class VerifyImageMatchInput
+{
+    /// <summary>The image to check.</summary>
+    public required byte[] Image { get; init; }
+    /// <summary>A reference image for face matching. The face match check only runs when this is set.</summary>
+    public byte[]? ReferenceImage { get; init; }
+    /// <summary>Checks to run. All of them when omitted.</summary>
+    public List<ImageMatchCheck>? Checks { get; init; }
+}
+
+/// <summary>
+/// Face match between the image and the reference image.
+/// </summary>
+public class ImageFaceMatch
+{
+    [JsonPropertyName("matched")]
+    public bool Matched { get; set; }
+
+    /// <summary>1 minus the face distance. Prefer <see cref="MatchScore"/>.</summary>
+    [JsonPropertyName("similarity")]
+    public double? Similarity { get; set; }
+
+    /// <summary>How strongly the faces match (0-1): 0.5 at the match decision.</summary>
+    [JsonPropertyName("match_score")]
+    public double? MatchScore { get; set; }
+
+    /// <summary>Why matching failed (e.g. "no_face_detected").</summary>
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Estimated age of the detected face.
+/// </summary>
+public class ImageAgeEstimate
+{
+    [JsonPropertyName("estimated_age")]
+    public double EstimatedAge { get; set; }
+
+    /// <summary>Face detection confidence (0-1).</summary>
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+}
+
+/// <summary>
+/// Explicit content and skin exposure checks.
+/// </summary>
+public class ImageForensics
+{
+    [JsonPropertyName("nsfw")]
+    public bool Nsfw { get; set; }
+
+    [JsonPropertyName("nsfw_confidence")]
+    public double? NsfwConfidence { get; set; }
+
+    /// <summary>low, moderate or high.</summary>
+    [JsonPropertyName("skin_exposure_level")]
+    public string? SkinExposureLevel { get; set; }
+}
+
+/// <summary>
+/// Synthetic image checks, including content provenance.
+/// </summary>
+public class ImageSyntheticCheck
+{
+    [JsonPropertyName("is_synthetic")]
+    public bool? IsSynthetic { get; set; }
+
+    [JsonPropertyName("synthetic_probability")]
+    public double? SyntheticProbability { get; set; }
+
+    /// <summary>A C2PA (Content Credentials) manifest is embedded.</summary>
+    [JsonPropertyName("has_c2pa")]
+    public bool? HasC2pa { get; set; }
+
+    /// <summary>The C2PA manifest declares AI generation.</summary>
+    [JsonPropertyName("is_ai_generated")]
+    public bool? IsAiGenerated { get; set; }
+}
+
+/// <summary>
+/// Result of image verification. Each check's field is null when that check did not run.
+/// </summary>
+public class VerifyImageMatchResult
+{
+    [JsonPropertyName("schema_version")]
+    public string SchemaVersion { get; set; } = "";
+
+    /// <summary>The checks that ran. face_match is left out when no reference image was sent.</summary>
+    [JsonPropertyName("checks_run")]
+    public List<string> ChecksRun { get; set; } = new();
+
+    [JsonPropertyName("face_match")]
+    public ImageFaceMatch? FaceMatch { get; set; }
+
+    /// <summary>Null when the age check ran but found no face.</summary>
+    [JsonPropertyName("age")]
+    public ImageAgeEstimate? Age { get; set; }
+
+    [JsonPropertyName("forensic")]
+    public ImageForensics? Forensic { get; set; }
+
+    [JsonPropertyName("synthetic")]
+    public ImageSyntheticCheck? Synthetic { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+
+    [JsonPropertyName("processing_ms")]
+    public double ProcessingMs { get; set; }
+}
+
+// =============================================================================
+// Privacy
+// =============================================================================
+
+/// <summary>
+/// Input for personal data redaction. Send exactly one of <see cref="Text"/> or <see cref="Messages"/>.
+/// </summary>
+public class RedactInput
+{
+    /// <summary>One text to redact (max 10,000 characters).</summary>
+    public string? Text { get; init; }
+    /// <summary>The messages of one conversation, in order (1 to 100). The same value gets the same placeholder in every message.</summary>
+    public List<string>? Messages { get; init; }
+    /// <summary>Two-letter language code, when known.</summary>
+    public string? Language { get; init; }
+    /// <summary>Redaction mode. The API defaults to <see cref="RedactMode.Protective"/>.</summary>
+    public RedactMode? Mode { get; init; }
+    /// <summary>
+    /// Also removes age, school year, gender, nationality, everyday places and health details.
+    /// Safety analysis reads these, so use it only for text shared after analysis.
+    /// </summary>
+    public bool? StrictAnonymisation { get; init; }
+}
+
+/// <summary>
+/// Result of personal data redaction.
+/// </summary>
+public class RedactResult
+{
+    /// <summary>The redacted text, when <see cref="RedactInput.Text"/> was sent.</summary>
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    /// <summary>The redacted messages, when <see cref="RedactInput.Messages"/> was sent.</summary>
+    [JsonPropertyName("messages")]
+    public List<string>? Messages { get; set; }
+
+    /// <summary>Replaced occurrences per type.</summary>
+    [JsonPropertyName("counts")]
+    public Dictionary<string, int> Counts { get; set; } = new();
+
+    [JsonPropertyName("entities_total")]
+    public int EntitiesTotal { get; set; }
+
+    [JsonPropertyName("mode")]
+    public string Mode { get; set; } = "";
+
+    [JsonPropertyName("strict_anonymisation")]
+    public bool StrictAnonymisation { get; set; }
+
+    /// <summary>True when full name and place recognition ran. When false, names and places are still removed, with lower coverage.</summary>
+    [JsonPropertyName("model_applied")]
+    public bool ModelApplied { get; set; }
+
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+}
+
+// =============================================================================
+// Document Analysis
+// =============================================================================
+
+/// <summary>
+/// Valid endpoint names for document analysis.
+/// </summary>
+public static class DocumentEndpointName
+{
+    public const string Unsafe = "unsafe";
+    public const string Bullying = "bullying";
+    public const string Grooming = "grooming";
+    public const string SocialEngineering = "social-engineering";
+    public const string CoerciveControl = "coercive-control";
+    public const string Radicalisation = "radicalisation";
+    public const string RomanceScam = "romance-scam";
+    public const string MuleRecruitment = "mule-recruitment";
+
+    /// <summary>Returns all valid endpoint names.</summary>
+    public static readonly string[] All = new[]
+    {
+        Unsafe, Bullying, Grooming, SocialEngineering,
+        CoerciveControl, Radicalisation, RomanceScam, MuleRecruitment
+    };
+}
+
+/// <summary>
+/// Input for document safety analysis. Accepts a PDF or a single PNG, JPEG or WebP image.
+/// </summary>
+public class AnalyzeDocumentInput
+{
+    /// <summary>PDF or image file contents.</summary>
+    public required byte[] File { get; init; }
+
+    /// <summary>Original filename (e.g., "report.pdf").</summary>
+    public required string Filename { get; init; }
+
+    /// <summary>Detection endpoints to run on each page. Defaults to unsafe, coercive-control, radicalisation.</summary>
+    public List<string>? Endpoints { get; init; }
+
+    /// <summary>Customer-provided file reference ID (echoed in response).</summary>
+    public string? FileId { get; init; }
+
+    /// <summary>Age group for calibrated analysis (e.g. "7-10", "11-13", "14-17").</summary>
+    public string? AgeGroup { get; init; }
+
+    /// <summary>Language hint (ISO 639-1). Auto-detected if omitted.</summary>
+    public string? Language { get; init; }
+
+    /// <summary>Platform name.</summary>
+    public string? Platform { get; init; }
+
+    /// <summary>Minimum severity to include crisis helplines: low, medium, high (default) or critical.</summary>
+    public string? SupportThreshold { get; init; }
+
+    /// <summary>Images only: split a messaging screenshot into messages with a side attributed to each. Costs one additional call.</summary>
+    public bool SplitBySender { get; init; }
+
+    /// <summary>Your unique identifier for correlation with your systems (max 255 chars).</summary>
+    public string? ExternalId { get; init; }
+
+    /// <summary>Your end-customer identifier for multi-tenant / B2B2C routing (max 255 chars).</summary>
+    public string? CustomerId { get; init; }
+
+    /// <summary>Arbitrary key-value pairs for your own use.</summary>
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+/// <summary>
+/// Breakdown of how text was extracted from the document pages.
+/// </summary>
+public class DocumentExtractionSummary
+{
+    /// <summary>Pages where text was extracted from the PDF text layer.</summary>
+    [JsonPropertyName("text_layer_pages")]
+    public int TextLayerPages { get; set; }
+
+    /// <summary>Pages where OCR was used.</summary>
+    [JsonPropertyName("ocr_pages")]
+    public int OcrPages { get; set; }
+
+    /// <summary>Pages with insufficient text for analysis.</summary>
+    [JsonPropertyName("failed_pages")]
+    public int FailedPages { get; set; }
+
+    /// <summary>Average OCR confidence (0.0-1.0) across OCR pages.</summary>
+    [JsonPropertyName("average_ocr_confidence")]
+    public double AverageOcrConfidence { get; set; }
+}
+
+/// <summary>
+/// Detection result for a single endpoint on a single page.
+/// </summary>
+public class DocumentPageEndpointResult
+{
+    /// <summary>Endpoint name.</summary>
+    [JsonPropertyName("endpoint")]
+    public string Endpoint { get; set; } = "";
+
+    /// <summary>Whether a threat was detected.</summary>
+    [JsonPropertyName("detected")]
+    public bool Detected { get; set; }
+
+    /// <summary>Severity score (0-1).</summary>
+    [JsonPropertyName("severity")]
+    public double Severity { get; set; }
+
+    /// <summary>Confidence score (0-1).</summary>
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+
+    /// <summary>Risk score (0-1).</summary>
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    /// <summary>Risk level.</summary>
+    [JsonPropertyName("level")]
+    public string Level { get; set; } = "";
+
+    /// <summary>Detected categories.</summary>
+    [JsonPropertyName("categories")]
+    public List<DetectionCategory> Categories { get; set; } = new();
+
+    /// <summary>Evidence excerpts.</summary>
+    [JsonPropertyName("evidence")]
+    public List<DetectionEvidence> Evidence { get; set; } = new();
+
+    /// <summary>Recommended action.</summary>
+    [JsonPropertyName("recommended_action")]
+    public string RecommendedAction { get; set; } = "";
+
+    /// <summary>Human-readable rationale.</summary>
+    [JsonPropertyName("rationale")]
+    public string Rationale { get; set; } = "";
+}
+
+/// <summary>
+/// Analysis result for a single page of a document.
+/// </summary>
+public class DocumentPageResult
+{
+    /// <summary>Page number (1-indexed).</summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>First 200 characters of page text.</summary>
+    [JsonPropertyName("text_preview")]
+    public string TextPreview { get; set; } = "";
+
+    /// <summary>How text was extracted (text_layer or ocr).</summary>
+    [JsonPropertyName("extraction_method")]
+    public string ExtractionMethod { get; set; } = "";
+
+    /// <summary>OCR confidence if applicable.</summary>
+    [JsonPropertyName("ocr_confidence")]
+    public double? OcrConfidence { get; set; }
+
+    /// <summary>Detection results per endpoint.</summary>
+    [JsonPropertyName("results")]
+    public List<DocumentPageEndpointResult> Results { get; set; } = new();
+
+    /// <summary>Highest risk score on this page.</summary>
+    [JsonPropertyName("page_risk_score")]
+    public double PageRiskScore { get; set; }
+
+    /// <summary>Page severity level.</summary>
+    [JsonPropertyName("page_severity")]
+    public string PageSeverity { get; set; } = "";
+}
+
+/// <summary>
+/// A flagged page with elevated risk.
+/// </summary>
+public class DocumentFlaggedPage
+{
+    /// <summary>Page number.</summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>Risk score.</summary>
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    /// <summary>Severity level.</summary>
+    [JsonPropertyName("severity")]
+    public string Severity { get; set; } = "";
+
+    /// <summary>Endpoints that detected threats on this page.</summary>
+    [JsonPropertyName("detected_endpoints")]
+    public List<string> DetectedEndpoints { get; set; } = new();
+}
+
+/// <summary>
+/// Result of document safety analysis.
+/// </summary>
+public class DocumentAnalysisResult
+{
+    /// <summary>Customer-provided file reference (if provided).</summary>
+    [JsonPropertyName("file_id")]
+    public string? FileId { get; set; }
+
+    /// <summary>SHA-256 hash of the uploaded file for chain-of-custody verification.</summary>
+    [JsonPropertyName("document_hash")]
+    public string DocumentHash { get; set; } = "";
+
+    /// <summary>Total pages in the document.</summary>
+    [JsonPropertyName("total_pages")]
+    public int TotalPages { get; set; }
+
+    /// <summary>Pages with extractable text that were analyzed.</summary>
+    [JsonPropertyName("pages_analyzed")]
+    public int PagesAnalyzed { get; set; }
+
+    /// <summary>Breakdown of text extraction results.</summary>
+    [JsonPropertyName("extraction_summary")]
+    public DocumentExtractionSummary ExtractionSummary { get; set; } = new();
+
+    /// <summary>Per-page detection results.</summary>
+    [JsonPropertyName("page_results")]
+    public List<DocumentPageResult> PageResults { get; set; } = new();
+
+    /// <summary>Highest risk score across all pages (0-1).</summary>
+    [JsonPropertyName("overall_risk_score")]
+    public double OverallRiskScore { get; set; }
+
+    /// <summary>Overall severity level: none, low, medium, high or critical.</summary>
+    [JsonPropertyName("overall_severity")]
+    public string OverallSeverity { get; set; } = "";
+
+    /// <summary>Unique list of endpoints that detected threats.</summary>
+    [JsonPropertyName("detected_endpoints")]
+    public List<string> DetectedEndpoints { get; set; } = new();
+
+    /// <summary>Pages with elevated risk.</summary>
+    [JsonPropertyName("flagged_pages")]
+    public List<DocumentFlaggedPage> FlaggedPages { get; set; } = new();
+
+    /// <summary>Dynamic credit cost based on pages analyzed and endpoints used.</summary>
+    [JsonPropertyName("credits_used")]
+    public int CreditsUsed { get; set; }
+
+    /// <summary>Processing time in milliseconds.</summary>
+    [JsonPropertyName("processing_time_ms")]
+    public long ProcessingTimeMs { get; set; }
+
+    /// <summary>Detected language.</summary>
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    /// <summary>Language support status.</summary>
+    [JsonPropertyName("language_status")]
+    public string? LanguageStatus { get; set; }
+
+    /// <summary>Crisis support resources (if triggered).</summary>
+    [JsonPropertyName("support")]
+    public JsonElement? Support { get; set; }
+
+    /// <summary>Echo of provided external_id.</summary>
+    [JsonPropertyName("external_id")]
+    public string? ExternalId { get; set; }
+
+    /// <summary>Echo of provided customer_id.</summary>
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
+    /// <summary>Echo of provided metadata.</summary>
+    [JsonPropertyName("metadata")]
+    public JsonElement? Metadata { get; set; }
+}

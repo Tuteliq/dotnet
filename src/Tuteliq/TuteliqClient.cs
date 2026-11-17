@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -22,6 +23,7 @@ public class TuteliqClient : IDisposable
     private const int MaxContentLength = 50_000;
     private const int MaxMessagesCount = 100;
     private const int MaxBackoffMs = 30_000;
+    private const int MaxBatchReviewCount = 100;
     private const string SdkIdentifier = "Dotnet SDK";
 
     private readonly HttpClient _httpClient;
@@ -597,6 +599,12 @@ public class TuteliqClient : IDisposable
     public async Task<DetectionResult> DetectRadicalisationAsync(DetectionInput input, CancellationToken ct = default)
         => await PostAsync<DetectionResult>("/api/v1/safety/radicalisation", BuildDetectionBody(input), ct);
 
+    /// <summary>
+    /// Detect signs of emotional distress, telling a present crisis apart from figurative, quoted or past use.
+    /// </summary>
+    public async Task<DistressSignalsResult> DetectDistressSignalsAsync(DetectionInput input, CancellationToken ct = default)
+        => await PostAsync<DistressSignalsResult>("/api/v1/safety/distress-signals", BuildDetectionBody(input), ct);
+
     // =========================================================================
     // Multi-Endpoint Analysis
     // =========================================================================
@@ -639,6 +647,141 @@ public class TuteliqClient : IDisposable
         if (metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(metadata, JsonOptions)), "metadata");
         if (ageGroup != null) content.Add(new StringContent(ageGroup), "age_group");
         return await MultipartRequestAsync<VideoAnalysisResult>("/api/v1/safety/video", content, ct);
+    }
+
+    // =========================================================================
+    // Document Analysis
+    // =========================================================================
+
+    /// <summary>
+    /// Analyze a PDF or a single image for safety concerns. Runs the chosen detection endpoints on each page
+    /// and returns per-page results with an overall risk assessment. No document data is stored after processing.
+    /// </summary>
+    public async Task<DocumentAnalysisResult> AnalyzeDocumentAsync(AnalyzeDocumentInput input, CancellationToken ct = default)
+    {
+        if (input.File == null || input.File.Length == 0)
+            throw new ValidationException("Document file is required");
+        if (string.IsNullOrWhiteSpace(input.Filename))
+            throw new ValidationException("Filename is required");
+
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(input.File), "file", input.Filename);
+        content.Add(new StringContent(ResolvePlatform(input.Platform)), "platform");
+        if (input.Endpoints != null && input.Endpoints.Count > 0)
+            content.Add(new StringContent(JsonSerializer.Serialize(input.Endpoints, JsonOptions)), "endpoints");
+        if (input.FileId != null) content.Add(new StringContent(input.FileId), "file_id");
+        if (input.ExternalId != null) content.Add(new StringContent(input.ExternalId), "external_id");
+        if (input.CustomerId != null) content.Add(new StringContent(input.CustomerId), "customer_id");
+        if (input.Metadata != null) content.Add(new StringContent(JsonSerializer.Serialize(input.Metadata, JsonOptions)), "metadata");
+        if (input.AgeGroup != null) content.Add(new StringContent(input.AgeGroup), "age_group");
+        if (input.Language != null) content.Add(new StringContent(input.Language), "language");
+        if (input.SupportThreshold != null) content.Add(new StringContent(input.SupportThreshold), "support_threshold");
+        if (input.SplitBySender) content.Add(new StringContent("true"), "split_by_sender");
+        return await MultipartRequestAsync<DocumentAnalysisResult>("/api/v1/safety/document", content, ct);
+    }
+
+    // =========================================================================
+    // Incidents
+    // =========================================================================
+
+    /// <summary>
+    /// List the account's incidents, newest first. Pass <see cref="ListIncidentsResult.NextCursor"/> back as
+    /// <see cref="ListIncidentsInput.Cursor"/> for the next page.
+    /// </summary>
+    public async Task<ListIncidentsResult> ListIncidentsAsync(ListIncidentsInput? input = null, CancellationToken ct = default)
+    {
+        input ??= new ListIncidentsInput();
+        var query = BuildQuery(
+            ("category", input.Category),
+            ("severity", input.Severity),
+            ("status", input.Status),
+            ("source", input.Source),
+            ("from", input.From),
+            ("to", input.To),
+            ("platform", input.Platform),
+            ("external_id", input.ExternalId),
+            ("customer_id", input.CustomerId),
+            ("limit", input.Limit?.ToString(CultureInfo.InvariantCulture)),
+            ("cursor", input.Cursor),
+            ("include_summary", input.IncludeSummary ? "true" : null));
+        return await RequestWithRetryAsync<ListIncidentsResult>(HttpMethod.Get, $"/api/v1/incidents{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Get one incident's full detail.
+    /// </summary>
+    public async Task<IncidentDetail> GetIncidentAsync(string incidentId, CancellationToken ct = default)
+    {
+        RequireId(incidentId, "incidentId");
+        return await RequestWithRetryAsync<IncidentDetail>(HttpMethod.Get, $"/api/v1/incidents/{Escape(incidentId)}", null, ct);
+    }
+
+    /// <summary>
+    /// Incident KPIs over a time window (default: the last 30 days). Bounds are ISO 8601.
+    /// </summary>
+    public async Task<IncidentsOverview> GetIncidentsOverviewAsync(string? from = null, string? to = null, CancellationToken ct = default)
+    {
+        var query = BuildQuery(("from", from), ("to", to));
+        return await RequestWithRetryAsync<IncidentsOverview>(HttpMethod.Get, $"/api/v1/incidents/overview{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Time-bucketed incident counts. <paramref name="bucket"/> is hour, day (default) or week.
+    /// </summary>
+    public async Task<IncidentTrends> GetIncidentTrendsAsync(string? bucket = null, string? from = null, string? to = null, CancellationToken ct = default)
+    {
+        var query = BuildQuery(("bucket", bucket), ("from", from), ("to", to));
+        return await RequestWithRetryAsync<IncidentTrends>(HttpMethod.Get, $"/api/v1/incidents/trends{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Record a moderator review of an incident. Each review produces a signed audit receipt.
+    /// </summary>
+    public async Task<ReviewIncidentResult> ReviewIncidentAsync(string incidentId, ReviewIncidentInput input, CancellationToken ct = default)
+    {
+        RequireId(incidentId, "incidentId");
+        var body = BuildReviewBody(input);
+        return await RequestWithRetryAsync<ReviewIncidentResult>(HttpMethod.Post, $"/api/v1/incidents/{Escape(incidentId)}/review", body, ct);
+    }
+
+    /// <summary>
+    /// Apply the same moderator review to up to 100 incidents. Each incident still gets its own audit receipt;
+    /// a failure on one does not stop the others.
+    /// </summary>
+    public async Task<BatchReviewIncidentsResult> BatchReviewIncidentsAsync(BatchReviewIncidentsInput input, CancellationToken ct = default)
+    {
+        if (input.IncidentIds.Count == 0)
+            throw new ValidationException("At least one incident ID is required");
+        if (input.IncidentIds.Count > MaxBatchReviewCount)
+            throw new ValidationException($"A batch review accepts at most {MaxBatchReviewCount} incidents");
+        var body = BuildReviewBody(input);
+        body["incident_ids"] = input.IncidentIds;
+        return await RequestWithRetryAsync<BatchReviewIncidentsResult>(HttpMethod.Post, "/api/v1/incidents/batch-review", body, ct);
+    }
+
+    // =========================================================================
+    // Privacy
+    // =========================================================================
+
+    /// <summary>
+    /// Remove personal data from a text or from the messages of one conversation.
+    /// </summary>
+    public async Task<RedactResult> RedactAsync(RedactInput input, CancellationToken ct = default)
+    {
+        if ((input.Text == null) == (input.Messages == null))
+            throw new ValidationException("Send exactly one of Text or Messages");
+        if (input.Text != null && string.IsNullOrWhiteSpace(input.Text))
+            throw new ValidationException("Text must contain something other than spaces");
+        if (input.Messages != null)
+            ValidateMessagesCount(input.Messages.Count);
+
+        var body = new Dictionary<string, object?>();
+        if (input.Text != null) body["text"] = input.Text;
+        if (input.Messages != null) body["messages"] = input.Messages;
+        if (input.Language != null) body["language"] = input.Language;
+        if (input.Mode.HasValue) body["mode"] = input.Mode.Value.ToApiString();
+        if (input.StrictAnonymisation.HasValue) body["strict_anonymisation"] = input.StrictAnonymisation.Value;
+        return await PostAsync<RedactResult>("/api/v1/privacy/redact", body, ct);
     }
 
     // =========================================================================
@@ -760,6 +903,23 @@ public class TuteliqClient : IDisposable
         return await RequestWithRetryAsync<UsageMonthlyResult>(HttpMethod.Get, "/api/v1/usage/monthly", null, ct);
     }
 
+    /// <summary>
+    /// Get the request counts and tier limits for one day (YYYY-MM-DD, default today).
+    /// </summary>
+    public async Task<UsageSummaryResult> GetUsageSummaryAsync(string? date = null, CancellationToken ct = default)
+    {
+        var query = BuildQuery(("date", date));
+        return await RequestWithRetryAsync<UsageSummaryResult>(HttpMethod.Get, $"/api/v1/usage/summary{query}", null, ct);
+    }
+
+    /// <summary>
+    /// Get the real-time rate limit and quota status.
+    /// </summary>
+    public async Task<UsageQuotaResult> GetQuotaAsync(CancellationToken ct = default)
+    {
+        return await RequestWithRetryAsync<UsageQuotaResult>(HttpMethod.Get, "/api/v1/usage/quota", null, ct);
+    }
+
     // =========================================================================
     // Verification
     // =========================================================================
@@ -806,6 +966,21 @@ public class TuteliqClient : IDisposable
     public async Task<IdentityRetrieveResult> GetIdentityVerificationAsync(string verificationId, CancellationToken ct = default)
     {
         return await RequestWithRetryAsync<IdentityRetrieveResult>(HttpMethod.Get, $"/api/v1/verify/identity/{verificationId}", null, ct);
+    }
+
+    /// <summary>
+    /// Run image checks (face match against a reference image, age estimation, explicit content and
+    /// synthetic image detection) in one call. Images are processed in memory and never stored.
+    /// </summary>
+    public async Task<VerifyImageMatchResult> VerifyImageMatchAsync(VerifyImageMatchInput input, CancellationToken ct = default)
+    {
+        if (input.Image == null || input.Image.Length == 0)
+            throw new ValidationException("Image is required");
+
+        var body = new Dictionary<string, object?> { ["image"] = Convert.ToBase64String(input.Image) };
+        if (input.ReferenceImage != null) body["reference_image"] = Convert.ToBase64String(input.ReferenceImage);
+        if (input.Checks != null && input.Checks.Count > 0) body["checks"] = input.Checks.Select(c => c.ToApiString()).ToList();
+        return await PostAsync<VerifyImageMatchResult>("/api/v1/verify-image-match", body, ct);
     }
 
     // =========================================================================
@@ -1051,6 +1226,41 @@ public class TuteliqClient : IDisposable
     }
 
     private static string Escape(string value) => Uri.EscapeDataString(value);
+
+    private static string BuildQuery(params (string Key, string? Value)[] parameters)
+    {
+        var pairs = parameters
+            .Where(p => !string.IsNullOrEmpty(p.Value))
+            .Select(p => $"{p.Key}={Escape(p.Value!)}")
+            .ToList();
+        return pairs.Count > 0 ? $"?{string.Join("&", pairs)}" : "";
+    }
+
+    private static void RequireId(string id, string name)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ValidationException($"{name} is required");
+    }
+
+    private static Dictionary<string, object?> BuildReviewBody(ReviewIncidentInput input)
+    {
+        if (string.IsNullOrWhiteSpace(input.ModeratorExternalId))
+            throw new ValidationException("ModeratorExternalId is required so the audit trail can attribute the decision");
+        if (input.Action == ModeratorAction.Reclassify && string.IsNullOrWhiteSpace(input.NewRiskCategory))
+            throw new ValidationException("Reclassify requires NewRiskCategory");
+
+        var body = new Dictionary<string, object?>
+        {
+            ["action"] = input.Action.ToApiString(),
+            ["reason_code"] = input.ReasonCode.ToApiString(),
+            ["moderator_external_id"] = input.ModeratorExternalId,
+        };
+        if (input.ReasonComment != null) body["reason_comment"] = input.ReasonComment;
+        if (input.NewRiskLevel != null) body["new_risk_level"] = input.NewRiskLevel;
+        if (input.NewRiskCategory != null) body["new_risk_category"] = input.NewRiskCategory;
+        if (input.RetentionClass != null) body["retention_class"] = input.RetentionClass;
+        return body;
+    }
 
     private static string ResolvePlatform(string? platform = null)
     {
