@@ -10,14 +10,14 @@
 
     <!-- NuGet Package -->
     <PackageId>Tuteliq</PackageId>
-    <Version>2.3.0</Version>
+    <Version>2.5.0</Version>
     <Authors>Tuteliq</Authors>
     <Company>Tuteliq</Company>
-    <Description>Official .NET SDK for the Tuteliq API — AI-powered child safety analysis for C#/.NET applications</Description>
+    <Description>Official .NET SDK for the Tuteliq API: AI-powered child safety analysis for C#/.NET applications</Description>
     <PackageTags>tuteliq;child-safety;content-moderation;ai;sdk</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/TuteliqSDK/dotnet</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/TuteliqSDK/dotnet.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Tuteliq/dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Tuteliq/dotnet.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 

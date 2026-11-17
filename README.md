@@ -28,16 +28,21 @@
 
 ## Overview
 
-Tuteliq provides AI-powered content analysis to help protect children in digital environments. This SDK makes it easy to integrate Tuteliq's capabilities into your .NET applications — ASP.NET Core APIs, background services, Blazor apps, console tools, and more.
+Tuteliq provides AI-powered content analysis to help protect children in digital environments. This SDK makes it easy to integrate Tuteliq's capabilities into your .NET applications: ASP.NET Core APIs, background services, Blazor apps, console tools, and more.
 
 ### Key Features
 
-- **Bullying Detection** — Identify verbal abuse, exclusion, and harassment patterns
-- **Grooming Risk Analysis** — Detect predatory behavior across conversation threads
-- **Unsafe Content Detection** — Flag self-harm, violence, hate speech, and age-inappropriate content
-- **Emotional State Analysis** — Understand emotional signals and concerning trends
-- **Action Guidance** — Generate age-appropriate response recommendations
-- **Incident Reports** — Create professional summaries for review
+- **Bullying Detection**: Identify verbal abuse, exclusion, and harassment patterns
+- **Grooming Risk Analysis**: Detect predatory behavior across conversation threads
+- **Unsafe Content Detection**: Flag self-harm, violence, hate speech, and age-inappropriate content
+- **Emotional State Analysis**: Understand emotional signals and concerning trends
+- **Action Guidance**: Generate age-appropriate response recommendations
+- **Incident Reports**: Create professional summaries for review
+- **Fraud and Extended Safety**: Social engineering, scams, coercive control, radicalisation, distress signals and more
+- **Document, Image, Voice and Video Analysis**: Per-page document results, media safety checks and real-time voice streaming
+- **Age and Identity Verification**: Hosted verification sessions your users complete on their own device
+- **Incident Management**: List, review and track incidents with signed audit receipts
+- **Privacy Redaction**: Remove personal data from a text or a conversation
 
 ### Why Tuteliq?
 
@@ -60,12 +65,12 @@ dotnet add package Tuteliq
 Install-Package Tuteliq
 
 # PackageReference
-<PackageReference Include="Tuteliq" Version="1.0.0" />
+<PackageReference Include="Tuteliq" Version="2.5.0" />
 ```
 
 ### Requirements
 
-- .NET 6.0, 7.0, or 8.0+
+- .NET 8.0 or later
 - A Tuteliq API key ([get one here](https://tuteliq.ai/dashboard))
 
 ---
@@ -142,14 +147,14 @@ var result = await client.DetectBullyingAsync(new DetectBullyingInput
 
 // BullyingResult
 result.IsBullying       // bool
-result.BullyingType     // List<string> — verbal, social, etc.
+result.BullyingType     // List<string>: verbal, social, etc.
 result.Confidence       // double (0-1)
-result.Severity         // Severity enum — Low, Medium, High, Critical
+result.Severity         // Severity enum: Low, Medium, High, Critical
 result.RiskScore        // double (0-1)
 result.Rationale        // string
-result.RecommendedAction // string — none, monitor, flag_for_moderator, immediate_intervention
-result.ExternalId       // string? — echoed back
-result.CustomerId       // string? — echoed back
+result.RecommendedAction // string: none, monitor, flag_for_moderator, immediate_intervention
+result.ExternalId       // string?: echoed back
+result.CustomerId       // string?: echoed back
 ```
 
 ### Grooming Detection
@@ -168,13 +173,13 @@ var result = await client.DetectGroomingAsync(new DetectGroomingInput
 });
 
 // GroomingResult
-result.GroomingRisk        // GroomingRisk enum — None, Low, Medium, High, Critical
-result.Flags               // List<string> — age_inquiry, isolation_attempt, etc.
+result.GroomingRisk        // GroomingRisk enum: None, Low, Medium, High, Critical
+result.Flags               // List<string>: age_inquiry, isolation_attempt, etc.
 result.Confidence          // double (0-1)
 result.RiskScore           // double (0-1)
 result.Rationale           // string
 result.RecommendedAction   // string
-result.MessageAnalysis     // List<MessageAnalysis>? — per-message breakdown (conversation-aware endpoints)
+result.MessageAnalysis     // List<MessageAnalysis>?: per-message breakdown (conversation-aware endpoints)
 
 // Per-message breakdown
 if (result.MessageAnalysis is not null)
@@ -194,7 +199,7 @@ var result = await client.DetectUnsafeAsync(new DetectUnsafeInput
 
 // UnsafeResult
 result.Unsafe              // bool
-result.Categories          // List<string> — violence, self_harm, hate_speech, etc.
+result.Categories          // List<string>: violence, self_harm, hate_speech, etc.
 result.Severity            // Severity enum
 result.Confidence          // double (0-1)
 result.RiskScore           // double (0-1)
@@ -219,7 +224,7 @@ var result = await client.AnalyzeAsync(new AnalyzeInput
 });
 
 // AnalyzeResult
-result.RiskLevel           // RiskLevel enum — Safe, Low, Medium, High, Critical
+result.RiskLevel           // RiskLevel enum: Safe, Low, Medium, High, Critical
 result.RiskScore           // double (0-1)
 result.Summary             // string
 result.Bullying            // BullyingResult?
@@ -250,7 +255,7 @@ var result = await client.AnalyzeEmotionsAsync(new AnalyzeEmotionsInput
 // EmotionsResult
 result.DominantEmotions      // List<string>
 result.EmotionScores         // Dictionary<string, double>?
-result.Trend                 // EmotionTrend enum — Improving, Stable, Worsening
+result.Trend                 // EmotionTrend enum: Improving, Stable, Worsening
 result.Summary               // string
 result.RecommendedFollowup   // string
 ```
@@ -293,42 +298,172 @@ result.Categories            // List<string>
 result.RecommendedNextSteps  // List<string>
 ```
 
-### Age Verification (Beta)
-
-> **Pro tier ($99/mo)+ — 5 credits per request — POST /v1/verification/age**
+### Distress Signals
 
 ```csharp
-var ageResult = await client.VerifyAgeAsync(new VerifyAgeRequest
+var result = await client.DetectDistressSignalsAsync(new DetectionInput
 {
-    Document = File.OpenRead("id-front.jpg"),
-    Selfie = File.OpenRead("selfie.jpg"),
-    Method = VerificationMethod.Combined // Document | Biometric | Combined
+    Content = "text to analyze"
 });
 
-Console.WriteLine(ageResult.Verified);       // True
-Console.WriteLine(ageResult.EstimatedAge);   // 15
-Console.WriteLine(ageResult.AgeRange);       // "13-15"
-Console.WriteLine(ageResult.IsMinor);        // True
-Console.WriteLine(ageResult.Confidence);     // 0.97
+// DistressSignalsResult (extends DetectionResult)
+result.Detected           // bool
+result.RiskScore          // double (0-1)
+result.DistressReading    // string? (literal_present, about_other, past_resolved, figurative, quoted, none)
+result.SupportSuggested   // bool? (true when a supportive check-in fits better than a moderation case)
 ```
 
-### Identity Verification (Beta)
+The other fraud and extended safety methods (`DetectSocialEngineeringAsync`, `DetectAppFraudAsync`, `DetectRomanceScamAsync`, `DetectMuleRecruitmentAsync`, `DetectGamblingHarmAsync`, `DetectCoerciveControlAsync`, `DetectVulnerabilityExploitationAsync`, `DetectRadicalisationAsync`) take the same `DetectionInput` and return a `DetectionResult`.
 
-> **Business tier ($349/mo)+ — 10 credits per request — POST /v1/verification/identity**
+### Document Analysis
+
+Analyze a PDF or a single PNG, JPEG or WebP image. Each page runs through the detection endpoints you choose.
 
 ```csharp
-var identityResult = await client.VerifyIdentityAsync(new VerifyIdentityRequest
+var result = await client.AnalyzeDocumentAsync(new AnalyzeDocumentInput
 {
-    Document = File.OpenRead("id-front.jpg"),
-    Selfie = File.OpenRead("selfie.jpg")
+    File = await File.ReadAllBytesAsync("report.pdf"),
+    Filename = "report.pdf",
+    Endpoints = new List<string> { DocumentEndpointName.Unsafe, DocumentEndpointName.Grooming },
 });
 
-Console.WriteLine(identityResult.Verified);               // True
-Console.WriteLine(identityResult.MatchScore);             // 0.98
-Console.WriteLine(identityResult.LivenessPassed);         // True
-Console.WriteLine(identityResult.DocumentAuthenticated);  // True
-Console.WriteLine(identityResult.IsMinor);               // False
+Console.WriteLine(result.OverallSeverity);      // none, low, medium, high or critical
+Console.WriteLine(result.FlaggedPages.Count);
+Console.WriteLine(result.DocumentHash);         // SHA-256 of the uploaded file
 ```
+
+### Age and Identity Verification
+
+Verification runs in a hosted session: create a session, open its URL on the user's device (a new tab or a web view), then read the result by polling or from the `verification.completed` webhook. Verification is available on the Pro plan and above; identity mode needs a plan that includes it.
+
+```csharp
+var session = await client.CreateVerificationSessionAsync(new CreateVerificationSessionInput
+{
+    Mode = VerificationMode.Age,               // or VerificationMode.Identity
+    DocumentType = DocumentType.Passport,      // optional hint: Passport, NationalId, DriversLicense
+    ChipPolicy = ChipPolicy.Optional,          // optional: Optional, Required, InsteadOfPhoto
+});
+
+Console.WriteLine(session.Url);                // open this for the user
+Console.WriteLine(session.ExpiresAt);          // epoch milliseconds
+
+// Poll until the session finishes
+var poll = await client.GetVerificationSessionAsync(session.SessionId);
+if (poll.Status is VerificationSessionStatus.Completed or VerificationSessionStatus.Failed)
+{
+    var result = poll.GetResult();
+    Console.WriteLine(result?.Status);               // Verified, Failed or NeedsReview
+    Console.WriteLine(result?.IsMinor);
+    Console.WriteLine(result?.FaceMatch?.MatchScore); // 0-1, 0.5 at the match decision
+}
+
+// Cancel a session you no longer need
+await client.CancelVerificationSessionAsync(session.SessionId);
+```
+
+The extracted document fields, date of birth and failure reasons are released once: only the first poll after the session completes or fails carries them. Store them on that read, or subscribe to the `verification.completed` webhook.
+
+`VerificationSessionStatus.DocumentRequired` means the session needs a document photo before it can continue.
+
+### Image Verification
+
+Face match against a reference image, age estimation, explicit content and synthetic image checks in one call. Images are processed in memory and never stored.
+
+```csharp
+var result = await client.VerifyImageMatchAsync(new VerifyImageMatchInput
+{
+    Image = await File.ReadAllBytesAsync("selfie.jpg"),
+    ReferenceImage = await File.ReadAllBytesAsync("profile.jpg"),
+    Checks = new List<ImageMatchCheck> { ImageMatchCheck.FaceMatch, ImageMatchCheck.Age },
+});
+
+Console.WriteLine(result.FaceMatch?.Matched);
+Console.WriteLine(result.Age?.EstimatedAge);
+```
+
+### Incidents
+
+```csharp
+// List, newest first, with cursor paging
+string? cursor = null;
+do
+{
+    var page = await client.ListIncidentsAsync(new ListIncidentsInput
+    {
+        Category = "grooming",
+        Severity = "high",
+        Status = "new",
+        Limit = 50,
+        Cursor = cursor,
+    });
+    foreach (var incident in page.Incidents)
+        Console.WriteLine($"{incident.Id} {incident.RiskLevel} {incident.CreatedAt}");
+    cursor = page.NextCursor;
+} while (cursor != null);
+
+// Detail, overview and trends
+var detail = await client.GetIncidentAsync("incident-id");
+var overview = await client.GetIncidentsOverviewAsync();
+var trends = await client.GetIncidentTrendsAsync(bucket: "week");
+
+// Record a moderator decision (each one gets a signed audit receipt)
+var review = await client.ReviewIncidentAsync("incident-id", new ReviewIncidentInput
+{
+    Action = ModeratorAction.Dismiss,
+    ReasonCode = ModeratorReasonCode.FalsePositive,
+    ModeratorExternalId = "moderator-42",
+});
+
+// The same decision for up to 100 incidents
+var batch = await client.BatchReviewIncidentsAsync(new BatchReviewIncidentsInput
+{
+    IncidentIds = new List<string> { "incident-1", "incident-2" },
+    Action = ModeratorAction.Confirm,
+    ReasonCode = ModeratorReasonCode.ConfirmedAccurate,
+    ModeratorExternalId = "moderator-42",
+});
+Console.WriteLine($"{batch.Succeeded}/{batch.Total} reviewed");
+```
+
+`ModeratorExternalId` is required: use a stable identifier per moderator so the audit trail can attribute each decision.
+
+### Privacy Redaction
+
+```csharp
+var result = await client.RedactAsync(new RedactInput
+{
+    Messages = new List<string> { "hi, I'm Sam", "text me on 000 000 0000" },
+});
+
+Console.WriteLine(string.Join("\n", result.Messages!)); // the same value gets the same placeholder in every message
+Console.WriteLine(result.EntitiesTotal);
+```
+
+Send exactly one of `Text` or `Messages`. `Mode = RedactMode.Precise` leaves near misses such as a mistyped phone number in place; the default, `Protective`, removes them.
+
+### Webhooks
+
+```csharp
+var created = await client.CreateWebhookAsync(new CreateWebhookInput
+{
+    Name = "Moderation alerts",
+    Url = "https://example.com/tuteliq/webhook",
+    Events = new List<string> { WebhookEvents.IncidentCritical, WebhookEvents.VerificationCompleted },
+});
+Console.WriteLine(created.Secret); // only returned on creation; store it to verify deliveries
+
+var list = await client.ListWebhooksAsync();
+foreach (var hook in list.Webhooks)
+    Console.WriteLine($"{hook.Name} active={hook.IsActive} failures={hook.FailureCount}");
+
+await client.UpdateWebhookAsync(created.Id, new UpdateWebhookInput { IsActive = false });
+var test = await client.TestWebhookAsync(created.Id);
+Console.WriteLine($"{test.Success} {test.StatusCode} {test.LatencyMs}ms");
+var rotated = await client.RegenerateWebhookSecretAsync(created.Id);
+await client.DeleteWebhookAsync(created.Id);
+```
+
+Event names: `incident.critical`, `incident.high`, `grooming.detected`, `self_harm.detected`, `bullying.severe`, `verification.completed`, `minor.detected`, `csam.detected`, `csam.critical` (constants on `WebhookEvents`). A webhook takes 1 to 5 events.
 
 ### Voice Streaming
 
@@ -358,6 +493,8 @@ await session.SendAudioAsync(audioBytes);
 // End session and get summary
 var summary = await session.EndAsync();
 ```
+
+The stream connects to `/api/v1/safety/voice/stream` on the client's base URL and authenticates with your API key in the `Authorization` header.
 
 ### Credits Used
 
@@ -419,6 +556,11 @@ Console.WriteLine($"Remaining: {client.Usage?.Remaining}");
 // Rate limit (per minute)
 Console.WriteLine($"Rate limit: {client.RateLimit?.Remaining}/{client.RateLimit?.Limit}");
 
+// Daily counts and real-time quota
+var summary = await client.GetUsageSummaryAsync();
+var quota = await client.GetQuotaAsync();
+Console.WriteLine($"Remaining this minute: {quota.Remaining.RequestsThisMinute}");
+
 // Diagnostics
 Console.WriteLine($"Request ID: {client.LastRequestId}");
 Console.WriteLine($"Latency: {client.LastLatencyMs}ms");
@@ -441,27 +583,27 @@ try
 }
 catch (AuthenticationException ex)
 {
-    // 401 — Invalid or missing API key
+    // 401: Invalid or missing API key
     Console.WriteLine($"Auth error: {ex.Message} ({ex.Code})");
 }
 catch (ValidationException ex)
 {
-    // 400 — Invalid request parameters
+    // 400: Invalid request parameters
     Console.WriteLine($"Validation error: {ex.Message}");
 }
 catch (RateLimitException ex)
 {
-    // 429 — Too many requests
+    // 429: Too many requests
     Console.WriteLine($"Rate limited. Retry after {ex.RetryAfterSeconds}s");
 }
 catch (TierAccessException ex)
 {
-    // 403 — Feature not available on current tier
+    // 403: Feature not available on current tier
     Console.WriteLine($"Upgrade required: {ex.Message}");
 }
 catch (ServerException ex)
 {
-    // 5xx — Server error (auto-retried)
+    // 5xx: Server error (auto-retried)
     Console.WriteLine($"Server error ({ex.StatusCode}): {ex.Message}");
 }
 catch (Tuteliq.TimeoutException ex)
@@ -479,10 +621,10 @@ catch (NetworkException ex)
 ### Automatic Retries
 
 The SDK automatically retries on:
-- **5xx server errors** — with exponential backoff
-- **429 rate limits** — respects `Retry-After` header
-- **Network errors** — connection failures, DNS issues
-- **Timeouts** — configurable timeout per request
+- **5xx server errors**: with exponential backoff
+- **429 rate limits**: respects `Retry-After` header
+- **Network errors**: connection failures, DNS issues
+- **Timeouts**: configurable timeout per request
 
 Non-retryable errors (400, 401, 403, 404) fail immediately.
 
@@ -524,6 +666,16 @@ app.MapPost("/api/moderate", async (TuteliqClient tuteliq, ModerateRequest req) 
 // EmotionTrend: Improving, Stable, Worsening
 // Audience: Child, Parent, Educator, Platform
 // MessageRole: Adult, Child, Unknown
+// VerificationMode: Age, Identity
+// DocumentType: Passport, NationalId, DriversLicense
+// ChipPolicy: Optional, Required, InsteadOfPhoto
+// VerificationSessionStatus: Pending, InProgress, Completed, Failed, Expired, Cancelled, DocumentRequired
+// ModeratorAction: Confirm, Downgrade, Escalate, Reclassify, Dismiss, Resolve, Reopen
+// ModeratorReasonCode: ConfirmedAccurate, FalsePositive, OutOfContext, InsufficientSeverity,
+//                      IncorrectCategory, RequiresLawEnforcement, ParentNotified, Other
+// WebhookEventType: IncidentCritical, IncidentHigh, GroomingDetected, SelfHarmDetected, BullyingSevere,
+//                   VerificationCompleted, MinorDetected, CsamDetected, CsamCritical
+// Language: the 32 supported language codes (En, Es, Pt, ... Ru)
 ```
 
 ---
@@ -535,32 +687,32 @@ app.MapPost("/api/moderate", async (TuteliqClient tuteliq, ModerateRequest req) 
 The **bullying** and **unsafe content** methods analyze a single `text` field per request. If your app receives messages one at a time, concatenate a **sliding window of recent messages** into one string before calling the API. Single words or short fragments lack context for accurate detection and can be exploited to bypass safety filters.
 
 ```csharp
-// Bad — each message analyzed in isolation, easily evaded
+// Bad: each message analyzed in isolation, easily evaded
 foreach (var msg in messages)
 {
-    await client.DetectBullyingAsync(text: msg);
+    await client.DetectBullyingAsync(new DetectBullyingInput { Content = msg });
 }
 
-// Good — recent messages analyzed together
+// Good: recent messages analyzed together
 var window = string.Join(" ", recentMessages.TakeLast(10));
-await client.DetectBullyingAsync(text: window);
+await client.DetectBullyingAsync(new DetectBullyingInput { Content = window });
 ```
 
 The **grooming** method already accepts a `messages` list and analyzes the full conversation in context.
 
-### PII Redaction
+### Redact After Analysis
 
-Enable `PII_REDACTION_ENABLED=true` on your Tuteliq API to automatically strip emails, phone numbers, URLs, social handles, IPs, and other PII from detection summaries and webhook payloads. The original text is still analyzed in full — only stored outputs are scrubbed.
+Safety analysis reads context such as ages and places, so analyze the original text first and call `RedactAsync` only on text you share or store afterwards.
 
 ---
 
 ## Supported Languages
 
-Tuteliq supports **27 languages** with automatic detection — no configuration required.
+Tuteliq supports **32 languages** with automatic detection, no configuration required.
 
-**English** (stable) and **26 beta languages**: Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, and Irish.
+**English** (stable) and **31 beta languages**: Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish, Chinese, Japanese, Korean, Arabic, and Russian.
 
-All 24 EU official languages + Ukrainian, Norwegian, and Turkish. Each language includes culture-specific safety guidelines covering local slang, grooming patterns, self-harm coded vocabulary, and filter evasion techniques.
+All 24 EU official languages plus Ukrainian, Norwegian, Turkish, Chinese, Japanese, Korean, Arabic, and Russian. Each language includes culture-specific safety guidelines. The `Language` enum lists the codes.
 
 See the [Language Support docs](https://docs.tuteliq.ai/languages) for details.
 
@@ -568,13 +720,13 @@ See the [Language Support docs](https://docs.tuteliq.ai/languages) for details.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) for details.
+MIT. See [LICENSE](./LICENSE) for details.
 
 ---
 
-## Get Certified — Free
+## Get Certified for Free
 
-Tuteliq offers a **free certification program** for anyone who wants to deepen their understanding of online child safety. Complete a track, pass the quiz, and earn your official Tuteliq certificate — verified and shareable.
+Tuteliq offers a **free certification program** for anyone who wants to deepen their understanding of online child safety. Complete a track, pass the quiz, and earn your official Tuteliq certificate, verified and shareable.
 
 **Three tracks available:**
 
@@ -586,7 +738,7 @@ Tuteliq offers a **free certification program** for anyone who wants to deepen t
 
 **Start here →** [tuteliq.ai/certify](https://tuteliq.ai/certify)
 
-- 100% Free — no login required
+- 100% free, no login required
 - Verifiable certificate on completion
 - Covers grooming recognition, sextortion, cyberbullying, regulatory obligations (KOSA, EU DSA), and more
 
@@ -599,13 +751,13 @@ Before you decide to contribute or sponsor, read these numbers. They are not pro
 - **302 million** children are victims of online sexual exploitation and abuse every year. That is **10 children every second**. *(Childlight / University of Edinburgh, 2024)*
 - **1 in 8** children globally have been victims of non-consensual sexual imagery in the past year. *(Childlight, 2024)*
 - **370 million** girls and women alive today experienced rape or sexual assault in childhood. An estimated **240–310 million** boys and men experienced the same. *(UNICEF, 2024)*
-- **29.2 million** incidents of suspected child sexual exploitation were reported to NCMEC's CyberTipline in 2024 alone — containing **62.9 million files** (images, videos). *(NCMEC, 2025)*
-- **546,000** reports of online enticement (adults grooming children) in 2024 — a **192% increase** from the year before. *(NCMEC, 2025)*
+- **29.2 million** incidents of suspected child sexual exploitation were reported to NCMEC's CyberTipline in 2024 alone, containing **62.9 million files** (images, videos). *(NCMEC, 2025)*
+- **546,000** reports of online enticement (adults grooming children) in 2024, a **192% increase** from the year before. *(NCMEC, 2025)*
 - **1,325% increase** in AI-generated child sexual abuse material reports between 2023 and 2024. The technology that should protect children is being weaponized against them. *(NCMEC, 2025)*
 - **100 sextortion reports per day** to NCMEC. Since 2021, at least **36 teenage boys** have taken their own lives because they were victimized by sextortion. *(NCMEC, 2025)*
 - **84%** of reports resolve outside the United States. This is not an American problem. This is a **global emergency**. *(NCMEC, 2025)*
 
-End-to-end encryption is making platforms blind. In 2024, platforms reported **7 million fewer incidents** than the year before — not because abuse stopped, but because they can no longer see it. The tools that catch known images are failing. The systems that rely on human moderators are overwhelmed. The technology to detect behavior — grooming patterns, escalation, manipulation — in real-time text conversations **exists right now**. It is running at [api.tuteliq.ai](https://api.tuteliq.ai).
+End-to-end encryption is making platforms blind. In 2024, platforms reported **7 million fewer incidents** than the year before, not because abuse stopped, but because they can no longer see it. The tools that catch known images are failing. The systems that rely on human moderators are overwhelmed. The technology to detect behavior (grooming patterns, escalation, manipulation) in real-time text conversations **exists right now**. It is running at [api.tuteliq.ai](https://api.tuteliq.ai).
 
 The question is not whether this technology is possible. The question is whether we build the company to put it everywhere it needs to be.
 
@@ -613,7 +765,7 @@ The question is not whether this technology is possible. The question is whether
 
 We have the technology. We need the support.
 
-If this mission matters to you, consider [sponsoring our open-source work](https://github.com/sponsors/Tuteliq) so we can keep building the tools that protect children — and keep them free and accessible for everyone.
+If this mission matters to you, consider [sponsoring our open-source work](https://github.com/sponsors/Tuteliq) so we can keep building the tools that protect children, and keep them free and accessible for everyone.
 
 ---
 
