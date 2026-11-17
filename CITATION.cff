@@ -8,7 +8,7 @@ authors:
 repository-code: https://github.com/Tuteliq/dotnet
 url: https://tuteliq.ai
 abstract: >-
-  Official .NET SDK for Tuteliq — AI-powered child safety API for C#/.NET applications (ASP.NET, Blazor, MAUI)
+  Official .NET SDK for Tuteliq, the AI-powered child safety API for C#/.NET applications (ASP.NET, Blazor, MAUI)
 keywords:
   - child safety
   - dotnet

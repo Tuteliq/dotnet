@@ -1,30 +1,34 @@
 # Tuteliq .NET SDK
 
-> Official .NET SDK for Tuteliq — AI-powered child safety API for C#/.NET applications.
+> Official .NET SDK for Tuteliq, the AI-powered child safety API, for C#/.NET applications.
 
 ## What is this?
-A .NET library for the Tuteliq child safety API. Detect bullying, grooming, self-harm, substance promotion, and other harmful content in text, conversations, audio, images, and video. Works with ASP.NET, Blazor, MAUI, and any .NET 6+ application.
+A .NET library for the Tuteliq child safety API. Detect bullying, grooming, self-harm, fraud and other harmful content in text, conversations, documents, audio, images and video; run hosted age and identity verification; manage incidents; and redact personal data. Works with ASP.NET Core, Blazor, MAUI and any .NET 8+ application.
 
 ## Install
 dotnet add package Tuteliq
 
 ## Quick Start
 using Tuteliq;
-var client = new TuteliqClient(apiKey: Environment.GetEnvironmentVariable("TUTELIQ_API_KEY"));
-var result = await client.DetectUnsafeAsync(text: "content to check", ageGroup: "13-15");
+var client = new TuteliqClient(Environment.GetEnvironmentVariable("TUTELIQ_API_KEY")!);
+var result = await client.DetectUnsafeAsync(new DetectUnsafeInput
+{
+    Content = "content to check",
+    Context = new AnalysisContext { AgeGroup = "11-13" }
+});
 
 ## Key Features
-- Async/await throughout
-- All 20+ Tuteliq API endpoints
-- 16+ detection categories (KOSA compliant)
-- Age group calibration (under-10, 10-12, 13-15, 14-17)
-- Automatic retries and error handling
-- Strong typing for all request/response models
-- Age Verification (Beta) — POST /v1/verification/age — Pro tier ($99/mo)+, 5 credits
-- Identity Verification (Beta) — POST /v1/verification/identity — Business tier ($349/mo)+, 10 credits
+- Async/await throughout, with automatic retries and typed exceptions
+- Safety detection: bullying, grooming, unsafe content, emotions, distress signals
+- Fraud and extended safety: social engineering, app fraud, romance scams, mule recruitment, gambling harm, coercive control, vulnerability exploitation, radicalisation
+- Media: voice, image, video and document (PDF or image) analysis, real-time voice streaming
+- Verification: hosted age and identity verification sessions (CreateVerificationSessionAsync, GetVerificationSessionAsync), image verification (VerifyImageMatchAsync)
+- Incidents: list, detail, overview, trends, review and batch review
+- Privacy redaction (RedactAsync), webhooks, usage and quota, GDPR account tools
+- Strong typing for all request and response models
 
 ## Supported Languages
-27 languages: English (stable), Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish (beta). Auto-detected, no configuration needed.
+32 languages: English (stable), Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish, Chinese, Japanese, Korean, Arabic, Russian (beta). Auto-detected, no configuration needed.
 
 ## Links
 - Website: https://tuteliq.ai

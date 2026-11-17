@@ -44,6 +44,14 @@ internal class MockHandler : HttpMessageHandler
         });
     }
 
+    public static MockHandler WithRawJson(string json, HttpStatusCode status = HttpStatusCode.OK)
+    {
+        return new MockHandler(_ => new HttpResponseMessage(status)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+    }
+
     public static MockHandler WithError(HttpStatusCode status, string message, string? code = null)
     {
         return new MockHandler(_ =>
@@ -768,7 +776,10 @@ public class VerificationTests
     public void DocumentType_ToApiString()
     {
         Assert.Equal("passport", DocumentType.Passport.ToApiString());
-        Assert.Equal("id_card", DocumentType.IdCard.ToApiString());
+        Assert.Equal("national_id", DocumentType.NationalId.ToApiString());
+#pragma warning disable CS0618
+        Assert.Equal("national_id", DocumentType.IdCard.ToApiString());
+#pragma warning restore CS0618
         Assert.Equal("drivers_license", DocumentType.DriversLicense.ToApiString());
     }
 
@@ -789,6 +800,7 @@ public class VerificationTests
         Assert.Equal("failed", VerificationSessionStatus.Failed.ToApiString());
         Assert.Equal("expired", VerificationSessionStatus.Expired.ToApiString());
         Assert.Equal("cancelled", VerificationSessionStatus.Cancelled.ToApiString());
+        Assert.Equal("document_required", VerificationSessionStatus.DocumentRequired.ToApiString());
     }
 
     [Theory]
@@ -816,6 +828,7 @@ public class VerificationTests
     [InlineData("completed", VerificationSessionStatus.Completed)]
     [InlineData("expired", VerificationSessionStatus.Expired)]
     [InlineData("cancelled", VerificationSessionStatus.Cancelled)]
+    [InlineData("document_required", VerificationSessionStatus.DocumentRequired)]
     [InlineData(null, VerificationSessionStatus.Pending)]
     public void ParseVerificationSessionStatus(string? input, VerificationSessionStatus expected)
     {
@@ -829,7 +842,7 @@ public class VerificationTests
         {
             session_id = "sess_abc123",
             mobile_url = "https://verify.tuteliq.ai/age/?session=abc123&token=xyz",
-            expires_at = "2025-12-31T23:59:59Z",
+            expires_at = 1767225599000L,
             mode = "age"
         });
 
@@ -840,7 +853,6 @@ public class VerificationTests
         {
             Mode = VerificationMode.Age,
             DocumentType = DocumentType.Passport,
-            ExternalId = "ext-1"
         });
 
         Assert.Equal("sess_abc123", result.SessionId);
@@ -939,14 +951,14 @@ public class VerificationTests
     [Fact]
     public async Task CancelVerificationSession_calls_correct_endpoint()
     {
-        var handler = MockHandler.WithJson(new { message = "Session cancelled" });
+        var handler = MockHandler.WithJson(new { ok = true });
 
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
         using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
 
         var result = await client.CancelVerificationSessionAsync("sess_abc");
 
-        Assert.Equal("Session cancelled", result.Message);
+        Assert.True(result.Ok);
         Assert.Equal(HttpMethod.Delete, handler.Requests[0].Method);
         Assert.Equal("/api/v1/verify/session/sess_abc", handler.Requests[0].RequestUri?.AbsolutePath);
     }
