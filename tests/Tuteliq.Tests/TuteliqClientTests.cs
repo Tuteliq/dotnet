@@ -44,6 +44,14 @@ internal class MockHandler : HttpMessageHandler
         });
     }
 
+    public static MockHandler WithRawJson(string json, HttpStatusCode status = HttpStatusCode.OK)
+    {
+        return new MockHandler(_ => new HttpResponseMessage(status)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+    }
+
     public static MockHandler WithError(HttpStatusCode status, string message, string? code = null)
     {
         return new MockHandler(_ =>
