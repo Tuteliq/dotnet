@@ -6,9 +6,11 @@ namespace Tuteliq
 {
     public class VoiceStreamSession : IAsyncDisposable
     {
-        private const string VoiceStreamUrl = "wss://api.tuteliq.ai/voice/stream";
+        private const string VoiceStreamPath = "/api/v1/safety/voice/stream";
+        private const string DefaultBaseUrl = "https://api.tuteliq.ai";
 
         private readonly string _apiKey;
+        private readonly Uri _uri;
         private readonly VoiceStreamConfig? _config;
         private readonly VoiceStreamHandlers? _handlers;
         private readonly JsonSerializerOptions _jsonOptions;
@@ -20,9 +22,10 @@ namespace Tuteliq
         public string? SessionId { get; private set; }
         public bool IsActive { get; private set; }
 
-        internal VoiceStreamSession(string apiKey, VoiceStreamConfig? config, VoiceStreamHandlers? handlers)
+        internal VoiceStreamSession(string apiKey, Uri uri, VoiceStreamConfig? config, VoiceStreamHandlers? handlers)
         {
             _apiKey = apiKey;
+            _uri = uri;
             _config = config;
             _handlers = handlers;
             _jsonOptions = new JsonSerializerOptions
@@ -32,13 +35,28 @@ namespace Tuteliq
             };
         }
 
+        /// <summary>
+        /// The voice stream WebSocket URL for an API base URL: https becomes wss, http becomes ws.
+        /// </summary>
+        internal static Uri BuildUri(Uri? baseAddress)
+        {
+            var source = baseAddress ?? new Uri(DefaultBaseUrl);
+            return new UriBuilder(source)
+            {
+                Scheme = source.Scheme == Uri.UriSchemeHttp ? "ws" : "wss",
+                Port = source.IsDefaultPort ? -1 : source.Port,
+                Path = VoiceStreamPath,
+                Query = "",
+            }.Uri;
+        }
+
         public async Task ConnectAsync(CancellationToken ct = default)
         {
             _ws = new ClientWebSocket();
             _ws.Options.SetRequestHeader("Authorization", $"Bearer {_apiKey}");
             _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-            await _ws.ConnectAsync(new Uri(VoiceStreamUrl), _cts.Token);
+            await _ws.ConnectAsync(_uri, _cts.Token);
             IsActive = true;
 
             if (_config != null)

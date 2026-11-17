@@ -86,7 +86,9 @@ public enum IncidentStatus
 {
     New,
     Reviewed,
-    Resolved
+    Resolved,
+    Escalated,
+    Dismissed
 }
 
 /// <summary>
@@ -108,15 +110,21 @@ public enum WebhookEventType
     IncidentHigh,
     GroomingDetected,
     SelfHarmDetected,
-    BullyingSevere
+    BullyingSevere,
+    VerificationCompleted,
+    MinorDetected,
+    CsamDetected,
+    CsamCritical
 }
 
 /// <summary>
-/// Supported languages for analysis.
+/// Supported languages for analysis. English is stable; the others are in beta.
 /// </summary>
 public enum Language
 {
-    En, Es, Pt, Uk, Sv, No, Da, Fi, De, Fr
+    En, Es, Pt, Uk, Sv, No, Da, Fi, De, Fr,
+    Nl, Pl, It, Tr, Ro, El, Cs, Hu, Bg, Hr, Sk, Lt, Lv, Et, Sl, Mt, Ga,
+    Zh, Ja, Ko, Ar, Ru
 }
 
 /// <summary>
@@ -173,8 +181,25 @@ public enum VerificationMode
 public enum DocumentType
 {
     Passport,
+    /// <summary>Obsolete alias of <see cref="NationalId"/>; sends <c>national_id</c>.</summary>
+    [Obsolete("Use DocumentType.NationalId. This value now sends national_id.")]
     IdCard,
-    DriversLicense
+    DriversLicense,
+    /// <summary>A national identity card.</summary>
+    NationalId
+}
+
+/// <summary>
+/// How a passport or ID card chip read counts as document evidence in a verification session.
+/// </summary>
+public enum ChipPolicy
+{
+    /// <summary>The document photo is required and a chip read adds to it (the API default).</summary>
+    Optional,
+    /// <summary>The photo and a valid chip read are both required.</summary>
+    Required,
+    /// <summary>A chip read that proves itself genuine replaces the photo; otherwise the session asks for a photo.</summary>
+    InsteadOfPhoto
 }
 
 /// <summary>
@@ -197,7 +222,76 @@ public enum VerificationSessionStatus
     Completed,
     Failed,
     Expired,
-    Cancelled
+    Cancelled,
+    /// <summary>The session needs a document photo before it can continue.</summary>
+    DocumentRequired
+}
+
+/// <summary>
+/// Moderator action on an incident review.
+/// </summary>
+public enum ModeratorAction
+{
+    Confirm,
+    Downgrade,
+    Escalate,
+    Reclassify,
+    Dismiss,
+    Resolve,
+    Reopen
+}
+
+/// <summary>
+/// Reason code for a moderator review.
+/// </summary>
+public enum ModeratorReasonCode
+{
+    ConfirmedAccurate,
+    FalsePositive,
+    OutOfContext,
+    InsufficientSeverity,
+    IncorrectCategory,
+    RequiresLawEnforcement,
+    ParentNotified,
+    Other
+}
+
+/// <summary>
+/// Checks run by image verification.
+/// </summary>
+public enum ImageMatchCheck
+{
+    FaceMatch,
+    Age,
+    Forensic,
+    Synthetic
+}
+
+/// <summary>
+/// Redaction mode for personal data removal.
+/// </summary>
+public enum RedactMode
+{
+    /// <summary>Also removes near misses such as a mistyped card or phone number (the API default).</summary>
+    Protective,
+    /// <summary>Leaves near misses in place.</summary>
+    Precise
+}
+
+/// <summary>
+/// Webhook event names as the API spells them, for <see cref="CreateWebhookInput.Events"/>.
+/// </summary>
+public static class WebhookEvents
+{
+    public const string IncidentCritical = "incident.critical";
+    public const string IncidentHigh = "incident.high";
+    public const string GroomingDetected = "grooming.detected";
+    public const string SelfHarmDetected = "self_harm.detected";
+    public const string BullyingSevere = "bullying.severe";
+    public const string VerificationCompleted = "verification.completed";
+    public const string MinorDetected = "minor.detected";
+    public const string CsamDetected = "csam.detected";
+    public const string CsamCritical = "csam.critical";
 }
 
 internal static class EnumExtensions
@@ -250,12 +344,16 @@ internal static class EnumExtensions
 
     public static string ToApiString(this WebhookEventType value) => value switch
     {
-        WebhookEventType.IncidentCritical => "incident.critical",
-        WebhookEventType.IncidentHigh => "incident.high",
-        WebhookEventType.GroomingDetected => "grooming.detected",
-        WebhookEventType.SelfHarmDetected => "self_harm.detected",
-        WebhookEventType.BullyingSevere => "bullying.severe",
-        _ => "incident.critical"
+        WebhookEventType.IncidentCritical => WebhookEvents.IncidentCritical,
+        WebhookEventType.IncidentHigh => WebhookEvents.IncidentHigh,
+        WebhookEventType.GroomingDetected => WebhookEvents.GroomingDetected,
+        WebhookEventType.SelfHarmDetected => WebhookEvents.SelfHarmDetected,
+        WebhookEventType.BullyingSevere => WebhookEvents.BullyingSevere,
+        WebhookEventType.VerificationCompleted => WebhookEvents.VerificationCompleted,
+        WebhookEventType.MinorDetected => WebhookEvents.MinorDetected,
+        WebhookEventType.CsamDetected => WebhookEvents.CsamDetected,
+        WebhookEventType.CsamCritical => WebhookEvents.CsamCritical,
+        _ => WebhookEvents.IncidentCritical
     };
 
     public static string ToApiString(this Detection value) => value switch
@@ -286,6 +384,28 @@ internal static class EnumExtensions
         Language.Fi => "fi",
         Language.De => "de",
         Language.Fr => "fr",
+        Language.Nl => "nl",
+        Language.Pl => "pl",
+        Language.It => "it",
+        Language.Tr => "tr",
+        Language.Ro => "ro",
+        Language.El => "el",
+        Language.Cs => "cs",
+        Language.Hu => "hu",
+        Language.Bg => "bg",
+        Language.Hr => "hr",
+        Language.Sk => "sk",
+        Language.Lt => "lt",
+        Language.Lv => "lv",
+        Language.Et => "et",
+        Language.Sl => "sl",
+        Language.Mt => "mt",
+        Language.Ga => "ga",
+        Language.Zh => "zh",
+        Language.Ja => "ja",
+        Language.Ko => "ko",
+        Language.Ar => "ar",
+        Language.Ru => "ru",
         _ => "en"
     };
 
@@ -316,9 +436,61 @@ internal static class EnumExtensions
     public static string ToApiString(this DocumentType value) => value switch
     {
         DocumentType.Passport => "passport",
-        DocumentType.IdCard => "id_card",
+#pragma warning disable CS0618
+        DocumentType.IdCard => "national_id",
+#pragma warning restore CS0618
+        DocumentType.NationalId => "national_id",
         DocumentType.DriversLicense => "drivers_license",
         _ => "passport"
+    };
+
+    public static string ToApiString(this ChipPolicy value) => value switch
+    {
+        ChipPolicy.Optional => "optional",
+        ChipPolicy.Required => "required",
+        ChipPolicy.InsteadOfPhoto => "instead_of_photo",
+        _ => "optional"
+    };
+
+    public static string ToApiString(this ModeratorAction value) => value switch
+    {
+        ModeratorAction.Confirm => "confirm",
+        ModeratorAction.Downgrade => "downgrade",
+        ModeratorAction.Escalate => "escalate",
+        ModeratorAction.Reclassify => "reclassify",
+        ModeratorAction.Dismiss => "dismiss",
+        ModeratorAction.Resolve => "resolve",
+        ModeratorAction.Reopen => "reopen",
+        _ => throw new ArgumentOutOfRangeException(nameof(value))
+    };
+
+    public static string ToApiString(this ModeratorReasonCode value) => value switch
+    {
+        ModeratorReasonCode.ConfirmedAccurate => "confirmed_accurate",
+        ModeratorReasonCode.FalsePositive => "false_positive",
+        ModeratorReasonCode.OutOfContext => "out_of_context",
+        ModeratorReasonCode.InsufficientSeverity => "insufficient_severity",
+        ModeratorReasonCode.IncorrectCategory => "incorrect_category",
+        ModeratorReasonCode.RequiresLawEnforcement => "requires_law_enforcement",
+        ModeratorReasonCode.ParentNotified => "parent_notified",
+        ModeratorReasonCode.Other => "other",
+        _ => throw new ArgumentOutOfRangeException(nameof(value))
+    };
+
+    public static string ToApiString(this ImageMatchCheck value) => value switch
+    {
+        ImageMatchCheck.FaceMatch => "face_match",
+        ImageMatchCheck.Age => "age",
+        ImageMatchCheck.Forensic => "forensic",
+        ImageMatchCheck.Synthetic => "synthetic",
+        _ => throw new ArgumentOutOfRangeException(nameof(value))
+    };
+
+    public static string ToApiString(this RedactMode value) => value switch
+    {
+        RedactMode.Protective => "protective",
+        RedactMode.Precise => "precise",
+        _ => "protective"
     };
 
     public static string ToApiString(this VerificationStatus value) => value switch
@@ -337,6 +509,7 @@ internal static class EnumExtensions
         VerificationSessionStatus.Failed => "failed",
         VerificationSessionStatus.Expired => "expired",
         VerificationSessionStatus.Cancelled => "cancelled",
+        VerificationSessionStatus.DocumentRequired => "document_required",
         _ => "pending"
     };
 
@@ -363,6 +536,7 @@ internal static class EnumExtensions
         "failed" => VerificationSessionStatus.Failed,
         "expired" => VerificationSessionStatus.Expired,
         "cancelled" => VerificationSessionStatus.Cancelled,
+        "document_required" => VerificationSessionStatus.DocumentRequired,
         _ => VerificationSessionStatus.Pending
     };
 

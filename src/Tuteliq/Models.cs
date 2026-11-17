@@ -1172,17 +1172,30 @@ public class VideoAnalysisResult
 /// </summary>
 public class CreateVerificationSessionInput
 {
+    private const string NotSent = "The API does not accept this field and the SDK no longer sends it.";
+
     /// <summary>Type of verification to perform.</summary>
     public VerificationMode Mode { get; set; }
     /// <summary>Preferred document type (optional hint).</summary>
     public DocumentType? DocumentType { get; set; }
-    /// <summary>URL to redirect after verification completes.</summary>
+    /// <summary>How a passport or ID card chip read counts as document evidence. The API defaults to <see cref="Tuteliq.ChipPolicy.Optional"/>.</summary>
+    public ChipPolicy? ChipPolicy { get; set; }
+    /// <summary>
+    /// Whether the hosted page takes the document photo itself once the document is framed, steady and sharp.
+    /// The API defaults to <c>true</c>; with <c>false</c> the user taps Capture.
+    /// </summary>
+    public bool? AutoCapture { get; set; }
+    /// <summary>Not sent. Set the redirect URL in the dashboard verification settings instead.</summary>
+    [Obsolete(NotSent + " Set the redirect URL in the dashboard verification settings instead.")]
     public string? RedirectUrl { get; set; }
-    /// <summary>Your external reference ID.</summary>
+    /// <summary>Not sent.</summary>
+    [Obsolete(NotSent)]
     public string? ExternalId { get; set; }
-    /// <summary>Your end-customer identifier.</summary>
+    /// <summary>Not sent.</summary>
+    [Obsolete(NotSent)]
     public string? CustomerId { get; set; }
-    /// <summary>Custom key-value metadata.</summary>
+    /// <summary>Not sent.</summary>
+    [Obsolete(NotSent)]
     public Dictionary<string, object>? Metadata { get; set; }
 }
 
@@ -1197,8 +1210,9 @@ public class VerificationSessionResponse
     [JsonPropertyName("mobile_url")]
     public string MobileUrl { get; set; } = "";
 
+    /// <summary>Epoch milliseconds at which the session expires.</summary>
     [JsonPropertyName("expires_at")]
-    public string ExpiresAt { get; set; } = "";
+    public long ExpiresAt { get; set; }
 
     [JsonPropertyName("mode")]
     public string ModeRaw { get; set; } = "";
@@ -1209,6 +1223,28 @@ public class VerificationSessionResponse
     /// <summary>URL to open for the user to complete verification (mapped from mobile_url).</summary>
     [JsonIgnore]
     public string Url => MobileUrl;
+
+    /// <summary>
+    /// The check configured for this key (<c>full</c> or <c>liveness_only</c>). For age sessions it may
+    /// still be resolved per market on the user's device; the poll reports the check the result rests on.
+    /// </summary>
+    [JsonPropertyName("verification_mode")]
+    public string? VerificationCheck { get; set; }
+
+    /// <summary>How a chip read counts as document evidence (<c>optional</c>, <c>required</c> or <c>instead_of_photo</c>).</summary>
+    [JsonPropertyName("chip_policy")]
+    public string? ChipPolicy { get; set; }
+
+    /// <summary>Whether the hosted page takes the document photo itself.</summary>
+    [JsonPropertyName("auto_capture")]
+    public bool? AutoCapture { get; set; }
+
+    /// <summary>
+    /// Width in pixels the capture step should request from the camera. Small print on a document only
+    /// survives at this resolution, so pass it through rather than picking your own.
+    /// </summary>
+    [JsonPropertyName("recommended_image_width")]
+    public int? RecommendedImageWidth { get; set; }
 }
 
 /// <summary>
@@ -1219,11 +1255,20 @@ public class FaceMatchResult
     [JsonPropertyName("matched")]
     public bool Matched { get; set; }
 
+    /// <summary>Distance between the two faces (lower is more similar). Webhook deliveries only.</summary>
     [JsonPropertyName("distance")]
-    public double Distance { get; set; }
+    public double? Distance { get; set; }
 
+    /// <summary>1 minus the face distance. Kept for compatibility; prefer <see cref="MatchScore"/>.</summary>
     [JsonPropertyName("confidence")]
     public double Confidence { get; set; }
+
+    /// <summary>
+    /// How strongly the faces match (0-1): 0.5 at the match decision, high for a clear match,
+    /// near 0 for different people. Absent from API versions before it was added.
+    /// </summary>
+    [JsonPropertyName("match_score")]
+    public double? MatchScore { get; set; }
 }
 
 /// <summary>
@@ -1330,14 +1375,198 @@ public class VerificationSessionResult
     [JsonIgnore]
     public VerificationMode Mode => EnumExtensions.ParseVerificationMode(ModeRaw);
 
+    /// <summary>Raw verification result (null until there is one). <see cref="GetResult"/> reads it as a typed object.</summary>
     [JsonPropertyName("result")]
     public JsonElement? Result { get; set; }
 
-    [JsonPropertyName("created_at")]
-    public string? CreatedAt { get; set; }
+    /// <summary>Present once there is a result: the check it rests on (<c>full</c> or <c>liveness_only</c>).</summary>
+    [JsonPropertyName("verification_mode")]
+    public string? VerificationCheck { get; set; }
 
+    /// <summary>Present when the result rests on a document: <c>photo</c>, <c>chip</c> or <c>photo_and_chip</c>.</summary>
+    [JsonPropertyName("document_evidence")]
+    public string? DocumentEvidence { get; set; }
+
+    /// <summary>Name of the step the user has reached, for progress UI. Not a closed list.</summary>
+    [JsonPropertyName("step_progress")]
+    public string? StepProgress { get; set; }
+
+    /// <summary>How a chip read counts as document evidence, as set at creation.</summary>
+    [JsonPropertyName("chip_policy")]
+    public string? ChipPolicy { get; set; }
+
+    /// <summary>How the uploads were captured, as the capture client reported it. Released once, with the result.</summary>
+    [JsonPropertyName("capture")]
+    public JsonElement? Capture { get; set; }
+
+    /// <summary>Epoch milliseconds when the session was created.</summary>
+    [JsonPropertyName("created_at")]
+    public long? CreatedAt { get; set; }
+
+    /// <summary>Epoch milliseconds when the session expires.</summary>
     [JsonPropertyName("expires_at")]
-    public string? ExpiresAt { get; set; }
+    public long? ExpiresAt { get; set; }
+
+    /// <summary>
+    /// The verification result as a typed object, or null until there is one. The extracted document fields,
+    /// date of birth and failure reasons are released once, on the first poll after the session completes or fails;
+    /// persist them on that read or subscribe to the verification.completed webhook.
+    /// </summary>
+    public VerificationResult? GetResult()
+    {
+        if (Result is not { ValueKind: JsonValueKind.Object } element) return null;
+        return element.Deserialize<VerificationResult>();
+    }
+}
+
+/// <summary>
+/// Range the true age likely falls in, when the age came from the selfie alone.
+/// </summary>
+public class AgeRange
+{
+    [JsonPropertyName("low")]
+    public double Low { get; set; }
+
+    [JsonPropertyName("high")]
+    public double High { get; set; }
+}
+
+/// <summary>
+/// A national identity number found on the document.
+/// </summary>
+public class NationalIdResult
+{
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+
+    /// <summary>Whether the number passed its country's validation.</summary>
+    [JsonPropertyName("valid")]
+    public bool Valid { get; set; }
+
+    /// <summary>Kind of number (country-specific).</summary>
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
+
+    [JsonPropertyName("country_code")]
+    public string CountryCode { get; set; } = "";
+}
+
+/// <summary>
+/// Document extraction and validation details. Only <see cref="OcrConfidence"/> is always present;
+/// the extracted fields are released once.
+/// </summary>
+public class DocumentDetails
+{
+    /// <summary>OCR confidence (0-100).</summary>
+    [JsonPropertyName("ocr_confidence")]
+    public double OcrConfidence { get; set; }
+
+    [JsonPropertyName("name_extracted")]
+    public string? NameExtracted { get; set; }
+
+    [JsonPropertyName("first_name")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("last_name")]
+    public string? LastName { get; set; }
+
+    [JsonPropertyName("dob_extracted")]
+    public string? DobExtracted { get; set; }
+
+    [JsonPropertyName("document_number")]
+    public string? DocumentNumber { get; set; }
+
+    [JsonPropertyName("document_number_valid")]
+    public bool? DocumentNumberValid { get; set; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; set; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; set; }
+
+    [JsonPropertyName("country_name")]
+    public string? CountryName { get; set; }
+
+    [JsonPropertyName("document_type")]
+    public string? DocumentType { get; set; }
+
+    [JsonPropertyName("expiration_date")]
+    public string? ExpirationDate { get; set; }
+
+    [JsonPropertyName("expired")]
+    public bool? Expired { get; set; }
+
+    [JsonPropertyName("issue_date")]
+    public string? IssueDate { get; set; }
+
+    [JsonPropertyName("height_cm")]
+    public double? HeightCm { get; set; }
+
+    [JsonPropertyName("place_of_birth")]
+    public string? PlaceOfBirth { get; set; }
+
+    [JsonPropertyName("nationality")]
+    public string? Nationality { get; set; }
+
+    [JsonPropertyName("issuing_authority")]
+    public string? IssuingAuthority { get; set; }
+
+    /// <summary>The document data came from the document's chip and passed its integrity check.</summary>
+    [JsonPropertyName("chip_verified")]
+    public bool? ChipVerified { get; set; }
+
+    /// <summary>The chip's signer chains to a trusted issuing country. Null when not used or not checkable.</summary>
+    [JsonPropertyName("chip_issuer_trusted")]
+    public bool? ChipIssuerTrusted { get; set; }
+
+    [JsonPropertyName("national_id")]
+    public NationalIdResult? NationalId { get; set; }
+}
+
+/// <summary>
+/// Verification result carried by a session poll.
+/// </summary>
+public class VerificationResult
+{
+    [JsonPropertyName("status")]
+    public string StatusRaw { get; set; } = "";
+
+    [JsonIgnore]
+    public VerificationStatus Status => EnumExtensions.ParseVerificationStatus(StatusRaw);
+
+    /// <summary>Calculated age (null if not determined).</summary>
+    [JsonPropertyName("age")]
+    public double? Age { get; set; }
+
+    /// <summary>When the age came from the selfie alone: the range the true age likely falls in.</summary>
+    [JsonPropertyName("age_range")]
+    public AgeRange? AgeRange { get; set; }
+
+    /// <summary>Date of birth (YYYY-MM-DD). Released once.</summary>
+    [JsonPropertyName("date_of_birth")]
+    public string? DateOfBirth { get; set; }
+
+    [JsonPropertyName("is_minor")]
+    public bool? IsMinor { get; set; }
+
+    /// <summary>What the document evidence was, when the result rests on a document.</summary>
+    [JsonPropertyName("document_evidence")]
+    public string? DocumentEvidence { get; set; }
+
+    /// <summary>Document details (null when no document was used).</summary>
+    [JsonPropertyName("document")]
+    public DocumentDetails? Document { get; set; }
+
+    [JsonPropertyName("face_match")]
+    public FaceMatchResult? FaceMatch { get; set; }
+
+    [JsonPropertyName("liveness")]
+    public LivenessResult? Liveness { get; set; }
+
+    /// <summary>Reasons for any failures. Free text, not a closed list. Released once.</summary>
+    [JsonPropertyName("failure_reasons")]
+    public List<string>? FailureReasons { get; set; }
 }
 
 /// <summary>
@@ -1423,8 +1652,8 @@ public class IdentityRetrieveResult
 /// </summary>
 public class CancelVerificationSessionResult
 {
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
+    [JsonPropertyName("ok")]
+    public bool Ok { get; set; }
 }
 
 // =============================================================================
@@ -1439,17 +1668,31 @@ public class WebhookInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = "";
 
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
     [JsonPropertyName("url")]
     public string Url { get; set; } = "";
 
     [JsonPropertyName("events")]
     public List<string> Events { get; set; } = new();
 
-    [JsonPropertyName("active")]
-    public bool Active { get; set; }
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; }
 
-    [JsonPropertyName("secret")]
-    public string? Secret { get; set; }
+    /// <summary>Obsolete alias of <see cref="IsActive"/>.</summary>
+    [JsonIgnore]
+    [Obsolete("Use IsActive.")]
+    public bool Active { get => IsActive; set => IsActive = value; }
+
+    [JsonPropertyName("failure_count")]
+    public int FailureCount { get; set; }
+
+    [JsonPropertyName("last_triggered_at")]
+    public string? LastTriggeredAt { get; set; }
+
+    [JsonPropertyName("last_error")]
+    public string? LastError { get; set; }
 
     [JsonPropertyName("created_at")]
     public string? CreatedAt { get; set; }
@@ -1468,35 +1711,63 @@ public class WebhookListResult
 }
 
 /// <summary>
-/// Input for creating a webhook.
+/// Input for creating a webhook. New webhooks are always active.
 /// </summary>
 public class CreateWebhookInput
 {
+    /// <summary>Display name (1-100 characters). Required.</summary>
+    public string Name { get; set; } = "";
+    /// <summary>HTTPS endpoint that receives the events.</summary>
     public string Url { get; set; } = "";
+    /// <summary>1 to 5 event names; see <see cref="WebhookEvents"/>.</summary>
     public List<string> Events { get; set; } = new();
-    public bool Active { get; set; } = true;
+    /// <summary>Extra headers sent with each delivery.</summary>
+    public Dictionary<string, string>? Headers { get; set; }
 }
 
 /// <summary>
-/// Result from creating a webhook.
+/// Result from creating a webhook. <see cref="Secret"/> is only returned here.
 /// </summary>
 public class CreateWebhookResult
 {
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
 
-    [JsonPropertyName("webhook")]
-    public WebhookInfo Webhook { get; set; } = new();
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = "";
+
+    /// <summary>Signing secret. Store it now: it is not returned again.</summary>
+    [JsonPropertyName("secret")]
+    public string Secret { get; set; } = "";
+
+    [JsonPropertyName("events")]
+    public List<string> Events { get; set; } = new();
+
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string? CreatedAt { get; set; }
 }
 
 /// <summary>
-/// Input for updating a webhook.
+/// Input for updating a webhook. Only the fields you set are sent.
 /// </summary>
 public class UpdateWebhookInput
 {
+    public string? Name { get; set; }
     public string? Url { get; set; }
     public List<string>? Events { get; set; }
-    public bool? Active { get; set; }
+    /// <summary>Turns deliveries on or off. Re-activating resets the failure count.</summary>
+    public bool? IsActive { get; set; }
+    public Dictionary<string, string>? Headers { get; set; }
+
+    /// <summary>Obsolete alias of <see cref="IsActive"/>.</summary>
+    [Obsolete("Use IsActive.")]
+    public bool? Active { get => IsActive; set => IsActive = value; }
 }
 
 /// <summary>
@@ -1504,11 +1775,23 @@ public class UpdateWebhookInput
 /// </summary>
 public class UpdateWebhookResult
 {
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
 
-    [JsonPropertyName("webhook")]
-    public WebhookInfo Webhook { get; set; } = new();
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = "";
+
+    [JsonPropertyName("events")]
+    public List<string> Events { get; set; } = new();
+
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; }
+
+    [JsonPropertyName("updated_at")]
+    public string? UpdatedAt { get; set; }
 }
 
 /// <summary>
@@ -1516,6 +1799,9 @@ public class UpdateWebhookResult
 /// </summary>
 public class DeleteWebhookResult
 {
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
     [JsonPropertyName("message")]
     public string Message { get; set; } = "";
 }
@@ -1525,11 +1811,17 @@ public class DeleteWebhookResult
 /// </summary>
 public class TestWebhookResult
 {
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
 
     [JsonPropertyName("status_code")]
     public int? StatusCode { get; set; }
+
+    [JsonPropertyName("latency_ms")]
+    public double? LatencyMs { get; set; }
+
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
 }
 
 /// <summary>
@@ -1537,9 +1829,6 @@ public class TestWebhookResult
 /// </summary>
 public class RegenerateSecretResult
 {
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
-
     [JsonPropertyName("secret")]
     public string Secret { get; set; } = "";
 }

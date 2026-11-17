@@ -658,12 +658,16 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<CreateWebhookResult> CreateWebhookAsync(CreateWebhookInput input, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(input.Name))
+            throw new ValidationException("Webhook name is required");
+
         var body = new Dictionary<string, object?>
         {
+            ["name"] = input.Name,
             ["url"] = input.Url,
             ["events"] = input.Events,
-            ["active"] = input.Active,
         };
+        if (input.Headers != null) body["headers"] = input.Headers;
         return await RequestWithRetryAsync<CreateWebhookResult>(HttpMethod.Post, "/api/v1/webhooks", body, ct);
     }
 
@@ -673,10 +677,12 @@ public class TuteliqClient : IDisposable
     public async Task<UpdateWebhookResult> UpdateWebhookAsync(string webhookId, UpdateWebhookInput input, CancellationToken ct = default)
     {
         var body = new Dictionary<string, object?>();
+        if (input.Name != null) body["name"] = input.Name;
         if (input.Url != null) body["url"] = input.Url;
         if (input.Events != null) body["events"] = input.Events;
-        if (input.Active.HasValue) body["active"] = input.Active.Value;
-        return await RequestWithRetryAsync<UpdateWebhookResult>(HttpMethod.Patch, $"/api/v1/webhooks/{webhookId}", body, ct);
+        if (input.IsActive.HasValue) body["is_active"] = input.IsActive.Value;
+        if (input.Headers != null) body["headers"] = input.Headers;
+        return await RequestWithRetryAsync<UpdateWebhookResult>(HttpMethod.Put, $"/api/v1/webhooks/{Escape(webhookId)}", body, ct);
     }
 
     /// <summary>
@@ -684,7 +690,7 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<DeleteWebhookResult> DeleteWebhookAsync(string webhookId, CancellationToken ct = default)
     {
-        return await RequestWithRetryAsync<DeleteWebhookResult>(HttpMethod.Delete, $"/api/v1/webhooks/{webhookId}", null, ct);
+        return await RequestWithRetryAsync<DeleteWebhookResult>(HttpMethod.Delete, $"/api/v1/webhooks/{Escape(webhookId)}", null, ct);
     }
 
     /// <summary>
@@ -692,7 +698,8 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<TestWebhookResult> TestWebhookAsync(string webhookId, CancellationToken ct = default)
     {
-        return await RequestWithRetryAsync<TestWebhookResult>(HttpMethod.Post, $"/api/v1/webhooks/{webhookId}/test", null, ct);
+        var body = new Dictionary<string, object?> { ["webhook_id"] = webhookId };
+        return await RequestWithRetryAsync<TestWebhookResult>(HttpMethod.Post, "/api/v1/webhooks/test", body, ct);
     }
 
     /// <summary>
@@ -700,7 +707,7 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<RegenerateSecretResult> RegenerateWebhookSecretAsync(string webhookId, CancellationToken ct = default)
     {
-        return await RequestWithRetryAsync<RegenerateSecretResult>(HttpMethod.Post, $"/api/v1/webhooks/{webhookId}/secret", null, ct);
+        return await RequestWithRetryAsync<RegenerateSecretResult>(HttpMethod.Post, $"/api/v1/webhooks/{Escape(webhookId)}/regenerate-secret", null, ct);
     }
 
     // =========================================================================
@@ -764,8 +771,8 @@ public class TuteliqClient : IDisposable
     {
         var body = new Dictionary<string, object?> { ["mode"] = input.Mode.ToApiString() };
         if (input.DocumentType.HasValue) body["document_type"] = input.DocumentType.Value.ToApiString();
-        if (input.RedirectUrl != null) body["redirect_url"] = input.RedirectUrl;
-        AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
+        if (input.ChipPolicy.HasValue) body["chip_policy"] = input.ChipPolicy.Value.ToApiString();
+        if (input.AutoCapture.HasValue) body["auto_capture"] = input.AutoCapture.Value;
         return await RequestWithRetryAsync<VerificationSessionResponse>(HttpMethod.Post, "/api/v1/verify/session", body, ct);
     }
 
@@ -774,7 +781,7 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<VerificationSessionResult> GetVerificationSessionAsync(string sessionId, CancellationToken ct = default)
     {
-        return await RequestWithRetryAsync<VerificationSessionResult>(HttpMethod.Get, $"/api/v1/verify/session/{sessionId}", null, ct);
+        return await RequestWithRetryAsync<VerificationSessionResult>(HttpMethod.Get, $"/api/v1/verify/session/{Escape(sessionId)}", null, ct);
     }
 
     /// <summary>
@@ -782,7 +789,7 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public async Task<CancelVerificationSessionResult> CancelVerificationSessionAsync(string sessionId, CancellationToken ct = default)
     {
-        return await RequestWithRetryAsync<CancelVerificationSessionResult>(HttpMethod.Delete, $"/api/v1/verify/session/{sessionId}", null, ct);
+        return await RequestWithRetryAsync<CancelVerificationSessionResult>(HttpMethod.Delete, $"/api/v1/verify/session/{Escape(sessionId)}", null, ct);
     }
 
     /// <summary>
@@ -810,7 +817,7 @@ public class TuteliqClient : IDisposable
     /// </summary>
     public VoiceStreamSession CreateVoiceStream(VoiceStreamConfig? config = null, VoiceStreamHandlers? handlers = null)
     {
-        return new VoiceStreamSession(_apiKey, config, handlers);
+        return new VoiceStreamSession(_apiKey, VoiceStreamSession.BuildUri(_httpClient.BaseAddress), config, handlers);
     }
 
     // =========================================================================
@@ -1042,6 +1049,8 @@ public class TuteliqClient : IDisposable
     {
         return response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
     }
+
+    private static string Escape(string value) => Uri.EscapeDataString(value);
 
     private static string ResolvePlatform(string? platform = null)
     {
