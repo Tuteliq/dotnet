@@ -326,6 +326,7 @@ public class TuteliqClient : IDisposable
 
         if (input.ChildAge.HasValue) body["child_age"] = input.ChildAge.Value;
         if (input.Severity.HasValue) body["severity"] = input.Severity.Value.ToApiString();
+        if (!string.IsNullOrEmpty(input.Country)) body["country"] = input.Country;
         AddTrackingFields(body, input.ExternalId, input.CustomerId, input.Metadata);
 
         return await PostAsync<ActionPlanResult>("/api/v1/guidance/action-plan", body, ct);

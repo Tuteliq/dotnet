@@ -263,14 +263,18 @@ var result = await client.GetActionPlanAsync(new GetActionPlanInput
     Situation = "Child is being cyberbullied through group chat",
     ChildAge = 13,
     Audience = Audience.Parent,
-    Severity = Severity.High
+    Severity = Severity.High,
+    Country = "SE"  // optional, ISO 3166-1 alpha-2
 });
 
 // ActionPlanResult
-result.Steps          // List<string>
-result.Tone           // string
-result.ReadingLevel   // string?
+result.Steps            // List<string>
+result.Tone             // string
+result.ReadingLevel     // string?
+result.GeneralGuidance  // bool
 ```
+
+`Country` is the family's country, so the plan names that country's helplines and emergency number. It defaults to the account's country; with neither, the plan names the kind of service to contact. `GeneralGuidance` is `true` when the plan is general guidance for any harm, given because a plan tailored to the situation could not be written.
 
 ### Incident Report
 
