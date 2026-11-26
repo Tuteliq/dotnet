@@ -207,6 +207,11 @@ public class GetActionPlanInput
     public Audience Audience { get; set; } = Audience.Parent;
     /// <summary>Severity of the situation.</summary>
     public Severity? Severity { get; set; }
+    /// <summary>
+    /// The family's country (ISO 3166-1 alpha-2, e.g. "SE"), so the plan names that country's
+    /// helplines and emergency number. Defaults to the account's country.
+    /// </summary>
+    public string? Country { get; set; }
     /// <summary>Your unique identifier for correlation with your systems (max 255 chars).</summary>
     public string? ExternalId { get; set; }
     /// <summary>Your end-customer identifier for multi-tenant / B2B2C routing (max 255 chars).</summary>
@@ -451,6 +456,13 @@ public class ActionPlanResult
 
     [JsonPropertyName("approx_reading_level")]
     public string? ReadingLevel { get; set; }
+
+    /// <summary>
+    /// True when the plan is general guidance for any harm, given because a plan tailored to
+    /// the situation could not be written. False when the API leaves it out.
+    /// </summary>
+    [JsonPropertyName("general_guidance")]
+    public bool GeneralGuidance { get; set; }
 
     [JsonPropertyName("external_id")]
     public string? ExternalId { get; set; }

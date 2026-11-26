@@ -424,6 +424,60 @@ public class ActionPlanTests
         Assert.Contains("high", body);
         Assert.Contains("\"external_id\"", body);
     }
+
+    private static async Task<string> BodyFor(GetActionPlanInput input)
+    {
+        var handler = MockHandler.WithJson(new { audience = "parent", steps = new[] { "Step 1" }, tone = "calm" });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        await client.GetActionPlanAsync(input);
+        return handler.RequestBodies[0];
+    }
+
+    [Fact]
+    public async Task GetActionPlan_sends_country()
+    {
+        var body = await BodyFor(new GetActionPlanInput { Situation = "test", Country = "SE" });
+
+        Assert.Contains("\"country\":\"SE\"", body);
+    }
+
+    [Fact]
+    public async Task GetActionPlan_leaves_out_country_when_not_set()
+    {
+        var body = await BodyFor(new GetActionPlanInput { Situation = "test" });
+
+        Assert.DoesNotContain("\"country\"", body);
+    }
+
+    private static async Task<ActionPlanResult> ResultFor(object response)
+    {
+        var handler = MockHandler.WithJson(response);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.tuteliq.ai") };
+        using var client = new TuteliqClient("test-api-key-1234", httpClient, new TuteliqOptions { Retries = 0 });
+
+        return await client.GetActionPlanAsync(new GetActionPlanInput { Situation = "test" });
+    }
+
+    [Fact]
+    public async Task GetActionPlan_reads_general_guidance()
+    {
+        var result = await ResultFor(new
+        {
+            audience = "parent", steps = new[] { "Step 1" }, tone = "calm", general_guidance = true
+        });
+
+        Assert.True(result.GeneralGuidance);
+    }
+
+    [Fact]
+    public async Task GetActionPlan_tailored_plan_is_not_general_guidance()
+    {
+        var result = await ResultFor(new { audience = "parent", steps = new[] { "Step 1" }, tone = "calm" });
+
+        Assert.False(result.GeneralGuidance);
+    }
 }
 
 // =============================================================================
